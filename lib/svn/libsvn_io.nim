@@ -1,0 +1,2 @@
+type
+   SvnStream* {.bycopy.} = object
