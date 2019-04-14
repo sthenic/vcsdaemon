@@ -48,12 +48,17 @@ proc array_make*(p: ptr AprPool, nelts, elt_size: cint): ptr AprArrayHeader
    {.cdecl, importc: "apr_array_make", dynlib: libapr.}
 proc array_push*(arr: ptr AprArrayHeader): pointer
    {.cdecl, importc: "apr_array_push", dynlib: libapr.}
+proc array_pop*(arr: ptr AprArrayHeader): pointer
+   {.cdecl, importc: "apr_array_pop", dynlib: libapr.}
+
 
 template time_sec*(time: untyped): untyped =
   ((time) div APR_USEC_PER_SEC)
 
-template ARRAY_PUSH*(ary, `type`: untyped): untyped =
-  ((cast[ptr `type`](array_push(ary)))[])
+
+template ARRAY_PUSH*(arr, `type`: untyped): untyped =
+  ((cast[ptr `type`](array_push(arr)))[])
+
 
 iterator pairs*(hash: ptr AprHash, p: ptr AprPool): tuple[key, val: pointer] =
    var hi = hash_first(p, hash)
@@ -62,3 +67,7 @@ iterator pairs*(hash: ptr AprHash, p: ptr AprPool): tuple[key, val: pointer] =
       hash_this(hi, addr(key), nil, addr(val))
       yield (key, val)
       hi = hash_next(hi)
+
+
+proc push*[T](arr: ptr AprArrayHeader, val: T) =
+   (cast[ptr T](array_push(arr)))[] = val

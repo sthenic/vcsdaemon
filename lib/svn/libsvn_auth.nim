@@ -52,5 +52,5 @@ proc auth_get_simple_prompt_provider*(
     importc: "svn_auth_get_simple_prompt_provider", dynlib: libsvn_auth.}
 
 proc auth_open*(auth_baton: ptr ptr SvnAuthBaton,
-                    providers: ptr AprArrayHeader, pool: ptr AprPool)
+                providers: ptr AprArrayHeader, pool: ptr AprPool)
    {.cdecl, importc: "svn_auth_open", dynlib: libsvn_auth.}

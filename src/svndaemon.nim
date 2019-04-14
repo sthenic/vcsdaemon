@@ -74,11 +74,11 @@ proc svn_open_session*(o: var SvnObject, url: string) =
    # Provider to get/set information from the user's ~/.subversion
    # configuration directory.
    auth_get_simple_provider2(addr(provider), nil, nil, o.pool)
-   ARRAY_PUSH(providers, ptr SvnAuthProviderObject) = provider
+   push(providers, provider)
 
    # Provider to prompt the user for a username and password.
    auth_get_simple_prompt_provider(addr(provider), prompt_helper, nil, 3, o.pool)
-   ARRAY_PUSH(providers, ptr SvnAuthProviderObject) = provider
+   push(providers, provider)
 
    var callbacks: ptr SvnRaCallbacks2
    discard ra_create_callbacks(addr(callbacks), o.pool)
@@ -146,7 +146,7 @@ proc svn_get_log*(o: var SvnObject, begin, `end`: SvnRevnum,
    var lpaths = array_make(o.pool, cast[cint](len(paths)),
                            cast[cint](sizeof(cstring)))
    for path in paths:
-      ARRAY_PUSH(lpaths, cstring) = path
+      push(lpaths, cstring(path))
 
    if not is_nil(
       ra_get_log2(o.session, lpaths, begin, `end`, 0, SVN_FALSE, SVN_TRUE,
