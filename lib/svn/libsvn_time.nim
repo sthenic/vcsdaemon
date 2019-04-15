@@ -8,4 +8,4 @@ else:
 
 proc parse_date*(matched: ptr SvnBoolean, result: ptr AprTime, text: cstring,
                  now: AprTime, pool: ptr AprPool):
-   ptr SvnError {.cdecl, importc: "svn_parse_date", dynlib: libsvn_time.}
+   ptr SvnLibError {.cdecl, importc: "svn_parse_date", dynlib: libsvn_time.}

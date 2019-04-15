@@ -15,15 +15,15 @@ type
       first_credentials*:
          proc (credentials: ptr pointer, iter_baton: ptr pointer,
                provider_baton: pointer, parameters: ptr AprHash,
-               realmstring: cstring, pool: ptr AprPool): ptr SvnError {.cdecl.}
+               realmstring: cstring, pool: ptr AprPool): ptr SvnLibError {.cdecl.}
       next_credentials*:
          proc (credentials: ptr pointer, iter_baton: pointer,
                provider_baton: pointer, parameters: ptr AprHash,
-               realmstring: cstring, pool: ptr AprPool): ptr SvnError {.cdecl.}
+               realmstring: cstring, pool: ptr AprPool): ptr SvnLibError {.cdecl.}
       save_credentials*:
          proc (saved: ptr SvnBoolean, credentials: pointer,
                provider_baton: pointer, parameters: ptr AprHash,
-               realmstring: cstring, pool: ptr AprPool): ptr SvnError {.cdecl.}
+               realmstring: cstring, pool: ptr AprPool): ptr SvnLibError {.cdecl.}
    SvnAuthProviderObject* {.bycopy.} = object
       vtable*: ptr SvnAuthProvider
       provider_baton*: pointer
@@ -33,11 +33,11 @@ type
       may_save*: SvnBoolean
    SvnAuthPlaintextPromptFunc* =
       proc (may_save_plaintext: ptr SvnBoolean, realmstring: cstring,
-            baton: pointer, pool: ptr AprPool): ptr SvnError {.cdecl.}
+            baton: pointer, pool: ptr AprPool): ptr SvnLibError {.cdecl.}
    SvnAuthSimplePromptFunc* = proc (cred: ptr ptr SvnAuthCredSimple,
                                     baton: pointer, realm: cstring,
                                     username: cstring, may_save: SvnBoolean,
-                                    pool: ptr AprPool): ptr SvnError {.cdecl.}
+                                    pool: ptr AprPool): ptr SvnLibError {.cdecl.}
 
 proc auth_get_simple_provider2*(
    provider: ptr ptr SvnAuthProviderObject,
