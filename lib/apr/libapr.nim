@@ -3,9 +3,6 @@ when defined(linux):
 else:
    raise new_exception(Exception, "Only supported on Linux")
 
-const
-   APR_USEC_PER_SEC = 1000000
-
 type
    AprInt64* = clong
    AprTime* = AprInt64
@@ -26,6 +23,14 @@ type
       nalloc*: cint
       elts*: cstring
 
+const
+   APR_SUCCESS* = AprStatus(0)
+   APR_USEC_PER_SEC = 1000000
+
+proc initialize*(): AprStatus
+   {.cdecl, importc: "apr_initialize", dynlib: libapr.}
+proc terminate*()
+   {.cdecl, importc: "apr_terminate", dynlib: libapr.}
 proc pool_initialize*(): AprStatus
    {.cdecl, importc: "apr_pool_initialize", dynlib: libapr.}
 proc pool_terminate*()

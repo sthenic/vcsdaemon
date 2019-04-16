@@ -82,6 +82,7 @@ proc ra_get_latest_revnum*(session: ptr SvnRaSession,
                            latest_revnum: ptr SvnRevnum,
                            pool: ptr AprPool): ptr SvnLibError
    {.cdecl, importc: "svn_ra_get_latest_revnum", dynlib: libsvn_ra.}
+
 proc ra_get_log2*(session: ptr SvnRaSession, paths: ptr AprArrayHeader,
                   start: SvnRevnum, `end`: SvnRevnum, limit: cint,
                   discover_changed_paths: SvnBoolean,

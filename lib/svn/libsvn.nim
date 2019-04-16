@@ -32,12 +32,17 @@ proc close_session*(o: var SvnObject) =
 
 
 proc init*(o: var SvnObject) =
-   # TODO: Chech that the object isn't initialized from before.
-   discard libapr.pool_initialize()
-   discard libapr.pool_create_ex(addr(o.pool), nil, nil, nil)
+   if not is_nil(o.pool):
+      raise new_svn_error("SVN object is already initialized.")
+   if libapr.pool_initialize() != APR_SUCCESS:
+      raise new_svn_error("Failed to initialize APR pools.")
+   if libapr.pool_create_ex(addr(o.pool), nil, nil, nil) != APR_SUCCESS:
+      raise new_svn_error("Failed to create the APR pool.")
 
 
 proc destroy*(o: var SvnObject) =
+   if is_nil(o.pool):
+      raise new_svn_error("SVN object is not initialized.")
    close_session(o)
    pool_destroy(o.pool)
    pool_terminate()
@@ -84,7 +89,9 @@ proc open_session*(o: var SvnObject, url: string) =
    push(providers, provider)
 
    var callbacks: ptr SvnRaCallbacks2
-   discard ra_create_callbacks(addr(callbacks), o.pool)
+   if not is_nil(ra_create_callbacks(addr(callbacks), o.pool)):
+      raise new_svn_error("Failed to initialize repository access callback " &
+                          "structure.")
 
    # Initialize the authentication baton.
    var auth_baton: ptr SvnAuthBaton
@@ -142,11 +149,14 @@ proc get_log_cb(baton: pointer, log_entry: ptr SvnLogEntry,
 
 
 proc get_log*(o: var SvnObject, begin, `end`: SvnRevnum,
-                  paths: openarray[string]): seq[SvnLogObject] =
+              paths: openarray[string], limit: int = 0): seq[SvnLogObject] =
    ## Get a sequence of log objects from a range of revisions limited by
    ## ``begin`` and ``end`` (inclusive), filtered by ``paths``.
    if not o.is_session_open:
       raise new_svn_error("An SVN session is not open.")
+   if limit > high(cint):
+      raise new_svn_error("The provided limit '$1' exceeds the upper limit " &
+                          "of '$2'.", limit, high(cint))
 
    var lpaths = array_make(o.pool, cast[cint](len(paths)),
                            cast[cint](sizeof(cstring)))
@@ -154,8 +164,8 @@ proc get_log*(o: var SvnObject, begin, `end`: SvnRevnum,
       push(lpaths, cstring(path))
 
    if not is_nil(
-      ra_get_log2(o.session, lpaths, begin, `end`, 0, SVN_FALSE, SVN_TRUE,
-                  SVN_FALSE, nil, get_log_cb, addr(result), o.pool)
+      ra_get_log2(o.session, lpaths, begin, `end`, cast[cint](limit), SVN_FALSE,
+                  SVN_TRUE, SVN_FALSE, nil, get_log_cb, addr(result), o.pool)
    ):
       # TODO: Maybe this is not an error, just return the empty sequence.
       raise new_svn_error("Failed to get log.")
@@ -167,9 +177,10 @@ proc get_log*(o: var SvnObject, begin, `end`: SvnRevnum): seq[SvnLogObject] =
    result = get_log(o, begin, `end`, [""])
 
 
-proc get_log*(o: var SvnObject, paths: openarray[string]): seq[SvnLogObject] =
+proc get_log*(o: var SvnObject, paths: openarray[string], limit: int = 0):
+      seq[SvnLogObject] =
    ## Get a sequence of all log object targeted by ``paths``.
-   result = get_log(o, 0, SVN_INVALID_REVNUM, paths)
+   result = get_log(o, SVN_INVALID_REVNUM, 0, paths, limit)
 
 
 proc get_log*(o: var SvnObject, revision: SvnRevnum): SvnLogObject =
@@ -186,6 +197,6 @@ proc get_latest_log*(o: var SvnObject): SvnLogObject =
 
 proc get_latest_log*(o: var SvnObject, path: string): SvnLogObject =
    ## Get a single log object from the latest revision filtered by ``path``.
-   let tmp = get_log(o, 0, SVN_INVALID_REVNUM, @[path])
+   let tmp = get_log(o, SVN_INVALID_REVNUM, 0, @[path], 1)
    if len(tmp) > 0:
       result = tmp[^1]
