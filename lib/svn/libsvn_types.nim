@@ -30,4 +30,4 @@ type
          ptr SvnLibError {.cdecl.}
 
 const
-   SVN_INVALID_REVNUM* = cast[SvnRevnum](-1)
+   SVN_INVALID_REVNUM* = SvnRevnum(-1)

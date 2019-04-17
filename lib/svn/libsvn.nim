@@ -10,6 +10,9 @@ import libsvn_time
 
 export SvnRevnum
 
+const
+   SVN_LATEST_REVISION* = SVN_INVALID_REVNUM
+
 type
    SvnError* = object of Exception
    SvnObject* = ref object
@@ -200,3 +203,10 @@ proc get_latest_log*(o: var SvnObject, path: string): SvnLogObject =
    let tmp = get_log(o, SVN_INVALID_REVNUM, 0, @[path], 1)
    if len(tmp) > 0:
       result = tmp[^1]
+
+
+proc `$`*(x: SvnLogObject): string =
+   result = "Log entry for r" & $x.revision &
+            "\n  Timestamp: " & $x.timestamp &
+            "\n  Author:    '" & x.author & "'" &
+            "\n  Message:   '" & x.message & "'\n"
