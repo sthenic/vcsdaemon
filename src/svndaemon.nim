@@ -16,9 +16,6 @@ echo "Initializing"
 var svn_object = new SvnObject
 init(svn_object)
 open_session(svn_object, "svn://192.168.1.100/home/user/repos/helloworld")
-echo get_latest_log(svn_object)
-echo get_latest_log(svn_object, "branches")
-echo get_log(svn_object, ["trunk"], 5)
 
 var timer: Timer
 var empty_sigset: Sigset
@@ -37,17 +34,18 @@ discard timer_create(CLOCK_REALTIME, nil, timer)
 var new_time, old_time: Itimerspec
 new_time.it_value = Timespec(tv_sec: Time(2), tv_nsec: 0)
 new_time.it_interval = Timespec(tv_sec: Time(10), tv_nsec: 0)
-
 discard timer_settime(timer, 0, new_time, old_time)
 
-var latest_revision = svn_object.get_latest_revnum()
+let paths = ["trunk"]
+var latest_revision = get_latest_log(svn_object, paths).revision
+echo "Tracking changes from revision ", latest_revision, "."
 while not do_exit:
-   discard sigsuspend(empty_sigset)
-   if latest_revision != svn_object.get_latest_revnum():
+   if latest_revision != svn_object.get_latest_log(paths).revision:
       let log_objects = svn_object.get_log(SVN_LATEST_REVISION,
-                                           latest_revision + 1)
+                                           latest_revision + 1, paths)
       for o in log_objects:
          echo $o
       latest_revision = log_objects[0].revision
+   discard sigsuspend(empty_sigset)
 
 destroy(svn_object)
