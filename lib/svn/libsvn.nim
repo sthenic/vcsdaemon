@@ -198,9 +198,9 @@ proc get_latest_log*(o: var SvnObject): SvnLogObject =
    result = get_log(o, SVN_INVALID_REVNUM)
 
 
-proc get_latest_log*(o: var SvnObject, path: string): SvnLogObject =
+proc get_latest_log*(o: var SvnObject, paths: openarray[string]): SvnLogObject =
    ## Get a single log object from the latest revision filtered by ``path``.
-   let tmp = get_log(o, SVN_INVALID_REVNUM, 0, @[path], 1)
+   let tmp = get_log(o, SVN_INVALID_REVNUM, 0, paths, 1)
    if len(tmp) > 0:
       result = tmp[^1]
 
