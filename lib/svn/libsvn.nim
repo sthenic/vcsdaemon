@@ -142,8 +142,8 @@ proc get_log_object(log_entry: ptr SvnLogEntry, pool: ptr AprPool):
          raise new_svn_error("Unknown revprop '$1'.", property)
 
 
-proc get_log_cb(baton: pointer, log_entry: ptr SvnLogEntry,
-                    pool: ptr AprPool): ptr SvnLibError {.cdecl.} =
+proc on_get_log(baton: pointer, log_entry: ptr SvnLogEntry,
+                pool: ptr AprPool): ptr SvnLibError {.cdecl.} =
    if is_nil(baton):
       raise new_svn_error("Invalid reference to memory passed as log " &
                                  "entry baton.")
@@ -151,10 +151,10 @@ proc get_log_cb(baton: pointer, log_entry: ptr SvnLogEntry,
    result = SVN_NO_ERROR
 
 
-proc get_log*(o: var SvnObject, begin, `end`: SvnRevnum,
+proc get_log*(o: SvnObject, first, last: SvnRevnum,
               paths: openarray[string], limit: int = 0): seq[SvnLogObject] =
    ## Get a sequence of log objects from a range of revisions limited by
-   ## ``begin`` and ``end`` (inclusive), filtered by ``paths``.
+   ## ``first`` and `last` (inclusive), filtered by ``paths``.
    if not o.is_session_open:
       raise new_svn_error("An SVN session is not open.")
    if limit > high(cint):
@@ -166,39 +166,38 @@ proc get_log*(o: var SvnObject, begin, `end`: SvnRevnum,
    for path in paths:
       push(lpaths, cstring(path))
 
-   if not is_nil(
-      ra_get_log2(o.session, lpaths, begin, `end`, cast[cint](limit), SVN_FALSE,
-                  SVN_TRUE, SVN_FALSE, nil, get_log_cb, addr(result), o.pool)
-   ):
-      # TODO: Maybe this is not an error, just return the empty sequence.
+   let res = ra_get_log2(o.session, lpaths, first, last, cast[cint](limit),
+                         SVN_FALSE, SVN_TRUE, SVN_FALSE, nil, on_get_log,
+                         addr(result), o.pool)
+   if not is_nil(res) and  res.apr_err != SVN_ERR_FS_NOT_FOUND:
       raise new_svn_error("Failed to get log.")
 
 
-proc get_log*(o: var SvnObject, begin, `end`: SvnRevnum): seq[SvnLogObject] =
+proc get_log*(o: SvnObject, first, last: SvnRevnum): seq[SvnLogObject] =
    ## Get a sequence of log objects from a range of revisions limited by
-   ## ``begin`` and ``end`` (inclusive).
-   result = get_log(o, begin, `end`, [""])
+   ## ``first`` and `last` (inclusive).
+   result = get_log(o, first, last, [""])
 
 
-proc get_log*(o: var SvnObject, paths: openarray[string], limit: int = 0):
+proc get_log*(o: SvnObject, paths: openarray[string], limit: int = 0):
       seq[SvnLogObject] =
    ## Get a sequence of all log object targeted by ``paths``.
    result = get_log(o, SVN_INVALID_REVNUM, 0, paths, limit)
 
 
-proc get_log*(o: var SvnObject, revision: SvnRevnum): SvnLogObject =
+proc get_log*(o: SvnObject, revision: SvnRevnum): SvnLogObject =
    ## Get a single log object from a specific ``revision``.
    let tmp = get_log(o, revision, revision)
    if len(tmp) > 0:
       result = tmp[0]
 
 
-proc get_latest_log*(o: var SvnObject): SvnLogObject =
+proc get_latest_log*(o: SvnObject): SvnLogObject =
    ## Get a single log object from the latest revision.
    result = get_log(o, SVN_INVALID_REVNUM)
 
 
-proc get_latest_log*(o: var SvnObject, paths: openarray[string]): SvnLogObject =
+proc get_latest_log*(o: SvnObject, paths: openarray[string]): SvnLogObject =
    ## Get a single log object from the latest revision filtered by ``path``.
    let tmp = get_log(o, SVN_INVALID_REVNUM, 0, paths, 1)
    if len(tmp) > 0:

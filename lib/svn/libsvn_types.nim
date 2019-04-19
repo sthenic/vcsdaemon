@@ -2,6 +2,7 @@ import ../apr/libapr
 
 const
    SVN_NO_ERROR* = nil
+   SVN_ERR_FS_NOT_FOUND* = AprStatus(160013)
    SVN_TRUE* = 1
    SVN_FALSE* = 0
 
@@ -28,6 +29,9 @@ type
    SvnLogEntryReceiver* =
       proc (baton: pointer, log_entry: ptr SvnLogEntry, pool: ptr AprPool):
          ptr SvnLibError {.cdecl.}
+
+proc error_symbolic_name*(s: AprStatus): cstring
+   {.cdecl, importc: "svn_error_symbolic_name", dynlib: "libsvn_subr-1.so".}
 
 const
    SVN_INVALID_REVNUM* = SvnRevnum(-1)
