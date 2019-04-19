@@ -1,5 +1,6 @@
 import ../lib/svn/libsvn
 import posix
+import request
 
 var do_exit = false
 
@@ -12,10 +13,6 @@ proc sigalrm_handler(x: cint) {.noconv.} =
 proc sigint_handler(x: cint) {.noconv.} =
    do_exit = true
 
-echo "Initializing"
-var svn_object = new SvnObject
-init(svn_object)
-open_session(svn_object, "svn://192.168.1.100/home/user/repos/helloworld")
 
 var timer: Timer
 var empty_sigset: Sigset
@@ -36,16 +33,51 @@ new_time.it_value = Timespec(tv_sec: Time(2), tv_nsec: 0)
 new_time.it_interval = Timespec(tv_sec: Time(10), tv_nsec: 0)
 discard timer_settime(timer, 0, new_time, old_time)
 
-let paths = ["trunk"]
-var latest_revision = get_latest_log(svn_object, paths).revision
-echo "Tracking changes from revision ", latest_revision, "."
+type
+   RepositoryTracker = object
+      repository: Repository
+      svn_object: SvnObject
+
+echo "Initializing"
+var trackers: seq[RepositoryTracker]
+for r in get_repositories():
+   echo "Initializing an SVN session\n",
+        "  URL:    ", r.url, "\n",
+        "  Branch: ", r.branch
+   var tracker: RepositoryTracker
+   tracker.svn_object = new SvnObject
+   tracker.repository = r
+   libsvn.init(tracker.svn_object)
+   libsvn.open_session(tracker.svn_object, r.url)
+   add(trackers, tracker)
+
 while not do_exit:
-   if latest_revision != svn_object.get_latest_log(paths).revision:
-      let log_objects = svn_object.get_log(SVN_LATEST_REVISION,
-                                           latest_revision + 1, paths)
-      for o in log_objects:
-         echo $o
-      latest_revision = log_objects[0].revision
+   for tracker in trackers:
+      # Check delta between tracker
+      let so = tracker.svn_object
+      let alasso_latest = get_latest_revision(tracker.repository.id)
+      let server_latest = so.get_latest_log(
+         [tracker.repository.branch]).revision
+
+      if (server_latest > alasso_latest):
+         const BLOCK_SIZE = 30
+         # Issue updates in steps of the block size.
+         var first = alasso_latest + 1
+         var last = min(first + BLOCK_SIZE, server_latest)
+         while (first <= last):
+            echo "Attempt to find between ", first, " and ", last
+            let revisions_to_post = so.get_log(first, last,
+                                               [tracker.repository.branch])
+            echo "Found ", len(revisions_to_post), " revisions"
+            for r in revisions_to_post:
+               post_revision(Revision(repository: tracker.repository.id,
+                                      revision: "r" & $r.revision,
+                                      description: r.message,
+                                      timestamp: r.timestamp))
+            first = last + 1
+            last = min(first + BLOCK_SIZE, server_latest)
+
    discard sigsuspend(empty_sigset)
 
-destroy(svn_object)
+for t in mitems(trackers):
+   destroy(t.svn_object)
