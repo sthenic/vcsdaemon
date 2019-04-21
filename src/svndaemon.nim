@@ -4,14 +4,25 @@ import tracker
 
 var do_exit = false
 
+
 proc timer_create*(a1: ClockId, a2: ptr SigEvent = nil, a3: var Timer): cint
    {.importc, header: "<time.h>".}
+
 
 proc sigalrm_handler(x: cint) {.noconv.} =
    discard
 
+
 proc sigint_handler(x: cint) {.noconv.} =
    do_exit = true
+
+
+let pid = posix.fork()
+if pid < 0:
+   quit(-1)
+elif pid > 0:
+   echo "Daemon created with ", pid, "."
+   quit(0)
 
 
 var timer: Timer
@@ -21,7 +32,6 @@ var alrm_action = Sigaction(sa_handler: sigalrm_handler, sa_mask: empty_sigset,
                             sa_flags: 0)
 var int_action = Sigaction(sa_handler: sigint_handler, sa_mask: empty_sigset,
                            sa_flags: 0)
-
 
 discard sigaction(SIGALRM, alrm_action, nil)
 discard sigaction(SIGINT, int_action, nil)
@@ -33,7 +43,6 @@ new_time.it_value = Timespec(tv_sec: Time(10), tv_nsec: 0)
 new_time.it_interval = Timespec(tv_sec: Time(10), tv_nsec: 0)
 discard timer_settime(timer, 0, new_time, old_time)
 
-echo "Initializing..."
 var trackers: seq[RepositoryTracker]
 while not do_exit:
    try:
@@ -43,5 +52,5 @@ while not do_exit:
    except:
       break
 
-echo "Destroying trackers..."
 destroy(trackers)
+quit(0)
