@@ -36,9 +36,12 @@ discard timer_settime(timer, 0, new_time, old_time)
 echo "Initializing..."
 var trackers: seq[RepositoryTracker]
 while not do_exit:
-   create(trackers)
-   update(trackers)
-   discard sigsuspend(empty_sigset)
+   try:
+      create(trackers)
+      update(trackers)
+      discard sigsuspend(empty_sigset)
+   except:
+      break
 
 echo "Destroying trackers..."
 destroy(trackers)

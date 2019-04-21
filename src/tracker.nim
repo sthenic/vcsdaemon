@@ -97,13 +97,16 @@ proc create*(trackers: var seq[RepositoryTracker]) =
          if already_tracked:
             continue
 
-         echo "Adding tracker for repository:\n",
-              "  URL:    ", r.url, "\n",
-              "  Branch: ", r.branch
          var t: RepositoryTracker
          init(t)
-         open(t, r)
-         add(trackers, t)
+         try:
+            open(t, r)
+            add(trackers, t)
+            echo "Adding tracker for repository:\n",
+               "  URL:    ", r.url, "\n",
+               "  Branch: ", r.branch
+         except SvnError:
+            destroy(t)
    except AlassoError:
       # TODO: Write a log message.
       discard
