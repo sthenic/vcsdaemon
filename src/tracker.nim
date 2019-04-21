@@ -1,7 +1,7 @@
 import strutils
 
 import ../lib/svn/libsvn
-import request
+import alasso
 
 
 type
@@ -50,7 +50,7 @@ proc update*(t: RepositoryTracker) =
    var server_latest: SvnRevnum
    try:
       db_latest = get_latest_revision(t.repository.id)
-   except RequestError:
+   except AlassoError:
       # TODO: Write a log message.
       echo "Failed!"
       return

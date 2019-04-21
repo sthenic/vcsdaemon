@@ -4,7 +4,7 @@ import json
 import uri
 
 type
-   RequestError* = object of Exception
+   AlassoError* = object of Exception
 
    Repository* = object
       id*: int
@@ -23,15 +23,15 @@ proc `/`(x, y: string): string =
    result = x & "/" & y
 
 
-proc new_request_error(msg: string, args: varargs[string, `$`]):
-      ref RequestError =
+proc new_alasso_error(msg: string, args: varargs[string, `$`]):
+      ref AlassoError =
    new result
    result.msg = format(msg, args)
 
 
 proc check_curl(code: Code) =
    if code != E_OK:
-      raise new_request_error("CURL failed: " & $easy_strerror(code))
+      raise new_alasso_error("CURL failed: " & $easy_strerror(code))
 
 
 proc on_write(data: ptr char, size: csize, nmemb: csize, user_data: pointer):
