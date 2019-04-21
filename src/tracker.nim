@@ -52,7 +52,6 @@ proc update*(t: RepositoryTracker) =
       db_latest = get_latest_revision(t.repository.id)
    except AlassoError:
       # TODO: Write a log message.
-      echo "Failed!"
       return
 
    try:
@@ -60,7 +59,6 @@ proc update*(t: RepositoryTracker) =
                                      [t.repository.branch]).revision
    except SvnError:
       # TODO: Write a log message.
-      echo "Failed!"
       return
 
    if server_latest > db_latest:
@@ -82,3 +80,30 @@ proc update*(t: RepositoryTracker) =
 proc update*(trackers: openarray[RepositoryTracker]) =
    for t in trackers:
       update(t)
+
+
+proc create*(trackers: var seq[RepositoryTracker]) =
+   ## Create trackers from repostories present in the Alasso database, add any
+   ## untracked repositories to ``trackers``.
+   try:
+      let repositories = alasso.get_repositories()
+      for r in repositories:
+         var already_tracked = false
+         for t in trackers:
+            # Check that a tracker does not yet exist.
+            if t.repository == r:
+               already_tracked = true
+               break
+         if already_tracked:
+            continue
+
+         echo "Adding tracker for repository:\n",
+              "  URL:    ", r.url, "\n",
+              "  Branch: ", r.branch
+         var t: RepositoryTracker
+         init(t)
+         open(t, r)
+         add(trackers, t)
+   except AlassoError:
+      # TODO: Write a log message.
+      discard

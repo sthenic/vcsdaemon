@@ -1,6 +1,5 @@
 import ../lib/svn/libsvn
 import posix
-import alasso
 import tracker
 
 var do_exit = false
@@ -30,23 +29,16 @@ discard sigaction(SIGINT, int_action, nil)
 discard timer_create(CLOCK_REALTIME, nil, timer)
 
 var new_time, old_time: Itimerspec
-new_time.it_value = Timespec(tv_sec: Time(2), tv_nsec: 0)
+new_time.it_value = Timespec(tv_sec: Time(10), tv_nsec: 0)
 new_time.it_interval = Timespec(tv_sec: Time(10), tv_nsec: 0)
 discard timer_settime(timer, 0, new_time, old_time)
 
-echo "Initializing"
+echo "Initializing..."
 var trackers: seq[RepositoryTracker]
-for r in get_repositories():
-   echo "Initializing an SVN session\n",
-      "  URL:    ", r.url, "\n",
-      "  Branch: ", r.branch
-   var t: RepositoryTracker
-   init(t)
-   open(t, r)
-   add(trackers, t)
-
 while not do_exit:
+   create(trackers)
    update(trackers)
    discard sigsuspend(empty_sigset)
 
+echo "Destroying trackers..."
 destroy(trackers)
