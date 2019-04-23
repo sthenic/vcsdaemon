@@ -13,6 +13,7 @@ const EFORK = -2
 const ESIGNAL = -3
 
 var do_exit = false
+var destroy_session = false
 
 
 proc timer_create*(a1: ClockId, a2: ptr SigEvent = nil, a3: var Timer): cint
@@ -25,6 +26,11 @@ proc sigalrm_handler(x: cint) {.noconv.} =
 
 proc sigint_handler(x: cint) {.noconv.} =
    do_exit = true
+
+
+proc sigpipe_handler(x: cint) {.noconv.} =
+   echo "Got SIGPIPE error!"
+   destroy_session = true
 
 
 # Parse the arguments and options and return a CLI state object.
@@ -63,10 +69,14 @@ var alrm_action =
    Sigaction(sa_handler: sigalrm_handler, sa_mask: empty_sigset, sa_flags: 0)
 var int_action =
    Sigaction(sa_handler: sigint_handler, sa_mask: empty_sigset, sa_flags: 0)
+var pipe_action =
+   Sigaction(sa_handler: sigpipe_handler, sa_mask: empty_sigset, sa_flags: 0)
 
 if sigaction(SIGALRM, alrm_action, nil) < 0:
    quit(ESIGNAL)
 if sigaction(SIGINT, int_action, nil) < 0:
+   quit(ESIGNAL)
+if sigaction(SIGPIPE, pipe_action, nil) < 0:
    quit(ESIGNAL)
 if timer_create(CLOCK_REALTIME, nil, timer) < 0:
    quit(ESIGNAL)
@@ -81,6 +91,10 @@ var trackers: seq[RepositoryTracker]
 var ecode = ESUCCESS
 while not do_exit:
    try:
+      if destroy_session:
+         destroy(trackers)
+         trackers = @[]
+         destroy_session = false
       create(trackers)
       update(trackers)
       discard sigsuspend(empty_sigset)
