@@ -18,6 +18,7 @@ type
 
 
 const ALASSO_URL = "http://localhost:5000/api"
+const CURL_TIMEOUT = 2 # Seconds
 
 proc `/`(x, y: string): string =
    result = x & "/" & y
@@ -66,6 +67,7 @@ proc get_repositories*(): seq[Repository] =
    check_curl(curl.easy_setopt(OPT_URL, ALASSO_URL / "repository"))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
+   check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
    check_curl(curl.easy_perform())
 
    let node = json.parse_json(str)
@@ -85,6 +87,7 @@ proc get_latest_revision*(repository: int): int =
    check_curl(curl.easy_setopt(OPT_URL, url))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
+   check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
    check_curl(curl.easy_perform())
 
    let node = json.parse_json(str)
@@ -121,5 +124,6 @@ proc post_revision*(revision: Revision) =
    check_curl(curl.easy_setopt(OPT_POSTFIELDS, $get_json(revision)))
    check_curl(curl.easy_setopt(OPT_HTTPHEADER, list))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write_ignore))
+   check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
    check_curl(curl.easy_perform())
    slist_free_all(list)
