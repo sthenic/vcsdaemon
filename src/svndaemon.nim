@@ -1,7 +1,9 @@
-import ../lib/svn/libsvn
 import posix
-import tracker
-import cli
+
+import ./cli
+import ./log
+import ./tracker
+import ../lib/svn/libsvn
 
 # Version information
 const VERSION_STR = "0.1.0"
@@ -11,6 +13,8 @@ const ESUCCESS = 0
 const EINVAL = -1
 const EFORK = -2
 const ESIGNAL = -3
+const ETIMER = -4
+const ECONN = -5
 
 var do_exit = false
 var destroy_session = false
@@ -31,11 +35,6 @@ proc sigalrm_handler(x: cint) {.noconv.} =
 
 proc sigint_handler(x: cint) {.noconv.} =
    do_exit = true
-
-
-proc sigpipe_handler(x: cint) {.noconv.} =
-   echo "Got SIGPIPE error!"
-   destroy_session = true
 
 
 # Parse the arguments and options and return a CLI state object.
@@ -64,44 +63,47 @@ elif cli_state.as_daemon:
       echo "Daemon created with ", pid, "."
       quit(ESUCCESS)
 
-var timer: Timer
+# Set up signals and actions.
 var empty_sigset: Sigset
 if sigemptyset(empty_sigset) < 0:
    quit(ESIGNAL)
 
-var alrm_action =
-   Sigaction(sa_handler: sigalrm_handler, sa_mask: empty_sigset, sa_flags: 0)
-var int_action =
-   Sigaction(sa_handler: sigint_handler, sa_mask: empty_sigset, sa_flags: 0)
-var pipe_action =
-   Sigaction(sa_handler: sigpipe_handler, sa_mask: empty_sigset, sa_flags: 0)
-
+var alrm_action = Sigaction(sa_handler: sigalrm_handler, sa_mask: empty_sigset,
+                            sa_flags: 0)
+var int_action = Sigaction(sa_handler: sigint_handler, sa_mask: empty_sigset,
+                           sa_flags: 0)
 if sigaction(SIGALRM, alrm_action, nil) < 0:
    quit(ESIGNAL)
 if sigaction(SIGINT, int_action, nil) < 0:
    quit(ESIGNAL)
-if sigaction(SIGPIPE, pipe_action, nil) < 0:
-   quit(ESIGNAL)
-if timer_create(CLOCK_REALTIME, nil, timer) < 0:
+if sigaction(SIGPIPE, int_action, nil) < 0:
    quit(ESIGNAL)
 
+# Set up timer.
+var timer: Timer
+if timer_create(CLOCK_REALTIME, nil, timer) < 0:
+   quit(ETIMER)
 var tspec: Itimerspec
 tspec.it_value = Timespec(tv_sec: Time(10), tv_nsec: 0)
+
+# Main program loop.
 var trackers: seq[RepositoryTracker]
 var ecode = ESUCCESS
 while not do_exit:
    try:
-      if destroy_session:
-         destroy(trackers)
-         trackers = @[]
-         destroy_session = false
       create(trackers, cli_state.alasso_url)
       update(trackers, cli_state.alasso_url)
       if timer_settime(timer, 0, tspec) < 0:
+         log.error("Failed to set timer.")
+         ecode = ETIMER
          break
       discard sigsuspend(empty_sigset)
-   except:
-      ecode = ESIGNAL
+   except TrackerError:
+      ecode = ECONN
+      break
+   except Exception as e:
+      log.error("(Unknown) '$1'", e.msg)
+      ecode = ECONN
       break
 
 destroy(trackers)
