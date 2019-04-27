@@ -43,6 +43,16 @@ proc open*(t: var RepositoryTracker, r: Repository) =
    t.is_open = true
 
 
+proc info(revisions: openarray[SvnLogObject], first, last: int): string =
+   ## Helper function to generate part of the trace message following a post
+   ## of one or more revisions.
+   if len(revisions) == 1:
+      result = "revision r" & $revisions[0].revision
+   elif len(revisions) > 1:
+      result = $len(revisions) & " revisions in range r" &
+               $first & " - r" & $last
+
+
 proc update*(t: RepositoryTracker, alasso_url: string) =
    if not t.is_open:
       raise new_tracker_error("Tracker is not active.")
@@ -77,6 +87,12 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
             except AlassoError as e:
                log.abort(TrackerError, "Failed to post revision to Alasso " &
                          "database at '$1'. ($2)", alasso_url, e.msg)
+         # Output a trace log message after successfully posting a batch of
+         # revisions.
+         if len(revisions_to_post) > 0:
+            log.info("Posted $1 from $2/$3 to repository $4.",
+                     info(revisions_to_post, first, last), t.repository.url,
+                     t.repository.branch, t.repository.id)
          first = last + 1
          last = min(first + UPDATE_BATCH_SIZE, server_latest)
 
