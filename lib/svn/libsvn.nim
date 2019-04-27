@@ -169,7 +169,7 @@ proc get_log*(o: SvnObject, first, last: SvnRevnum,
    let res = ra_get_log2(o.session, lpaths, first, last, cast[cint](limit),
                          SVN_FALSE, SVN_TRUE, SVN_FALSE, nil, on_get_log,
                          addr(result), o.pool)
-   if not is_nil(res) and  res.apr_err != SVN_ERR_FS_NOT_FOUND:
+   if not is_nil(res) and res.apr_err != SVN_ERR_FS_NOT_FOUND:
       raise new_svn_error("Failed to get log.")
 
 
