@@ -4,7 +4,7 @@ import tracker
 import cli
 
 # Version information
-const VERSION_STR = "v0.1.0"
+const VERSION_STR = "0.1.0"
 
 # Exit codes: negative values are
 const ESUCCESS = 0
@@ -64,7 +64,6 @@ elif cli_state.as_daemon:
       echo "Daemon created with ", pid, "."
       quit(ESUCCESS)
 
-
 var timer: Timer
 var empty_sigset: Sigset
 if sigemptyset(empty_sigset) < 0:
@@ -96,8 +95,8 @@ while not do_exit:
          destroy(trackers)
          trackers = @[]
          destroy_session = false
-      create(trackers)
-      update(trackers)
+      create(trackers, cli_state.alasso_url)
+      update(trackers, cli_state.alasso_url)
       if timer_settime(timer, 0, tspec) < 0:
          break
       discard sigsuspend(empty_sigset)

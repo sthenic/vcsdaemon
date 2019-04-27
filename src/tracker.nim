@@ -42,14 +42,14 @@ proc open*(t: var RepositoryTracker, r: Repository) =
    t.is_open = true
 
 
-proc update*(t: RepositoryTracker) =
+proc update*(t: RepositoryTracker, alasso_url: string) =
    if not t.is_open:
       raise new_tracker_error("Tracker is not active.")
 
    var db_latest: int
    var server_latest: SvnRevnum
    try:
-      db_latest = get_latest_revision(t.repository.id)
+      db_latest = get_latest_revision(t.repository.id, alasso_url)
    except AlassoError:
       # TODO: Write a log message.
       return
@@ -73,7 +73,7 @@ proc update*(t: RepositoryTracker) =
                post_revision(Revision(repository: t.repository.id,
                                       revision: "r" & $r.revision,
                                       description: r.message,
-                                      timestamp: r.timestamp))
+                                      timestamp: r.timestamp), alasso_url)
             except AlassoError:
                # TODO: Write a log message.
                return
@@ -81,16 +81,16 @@ proc update*(t: RepositoryTracker) =
          last = min(first + UPDATE_BATCH_SIZE, server_latest)
 
 
-proc update*(trackers: openarray[RepositoryTracker]) =
+proc update*(trackers: openarray[RepositoryTracker], alasso_url: string) =
    for t in trackers:
-      update(t)
+      update(t, alasso_url)
 
 
-proc create*(trackers: var seq[RepositoryTracker]) =
+proc create*(trackers: var seq[RepositoryTracker], alasso_url: string) =
    ## Create trackers from repostories present in the Alasso database, add any
    ## untracked repositories to ``trackers``.
    try:
-      let repositories = alasso.get_repositories()
+      let repositories = alasso.get_repositories(alasso_url)
       for r in repositories:
          var already_tracked = false
          for t in trackers:

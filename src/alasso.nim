@@ -17,8 +17,8 @@ type
       timestamp*: int64
 
 
-const ALASSO_URL = "http://localhost:5000/api"
 const CURL_TIMEOUT = 2 # Seconds
+
 
 proc `/`(x, y: string): string =
    result = x & "/" & y
@@ -60,11 +60,11 @@ proc parse_repository(n: JsonNode): Repository =
    )
 
 
-proc get_repositories*(): seq[Repository] =
+proc get_repositories*(url: string): seq[Repository] =
    let curl = libcurl.easy_init()
    defer:curl.easy_cleanup()
    var str = ""
-   check_curl(curl.easy_setopt(OPT_URL, ALASSO_URL / "repository"))
+   check_curl(curl.easy_setopt(OPT_URL, url / "api" / "repository"))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
@@ -75,12 +75,12 @@ proc get_repositories*(): seq[Repository] =
       add(result, parse_repository(r))
 
 
-proc get_latest_revision*(repository: int): int =
+proc get_latest_revision*(repository: int, url: string): int =
    let curl = libcurl.easy_init()
    defer:
       curl.easy_cleanup()
    var str = ""
-   let url = ALASSO_URL & "/revision/latest?filter=" & encode_url(format(
+   let url = url / "api/revision/latest?filter=" & encode_url(format(
       """[{"attribute": "repository", "value": "$1"}]""",
       $repository
    ))
@@ -113,13 +113,13 @@ proc get_json(r: Revision): JsonNode =
    }
 
 
-proc post_revision*(revision: Revision) =
+proc post_revision*(revision: Revision, url: string) =
    let curl = libcurl.easy_init()
    defer:
       curl.easy_cleanup()
    var list: Pslist
    list = slist_append(list, "content-type: application/vnd.api+json")
-   check_curl(curl.easy_setopt(OPT_URL, ALASSO_URL / "revision"))
+   check_curl(curl.easy_setopt(OPT_URL, url / "api" / "revision"))
    check_curl(curl.easy_setopt(OPT_POST, 1))
    check_curl(curl.easy_setopt(OPT_POSTFIELDS, $get_json(revision)))
    check_curl(curl.easy_setopt(OPT_HTTPHEADER, list))
