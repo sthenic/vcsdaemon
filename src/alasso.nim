@@ -17,7 +17,7 @@ type
       timestamp*: int64
 
 
-const CURL_TIMEOUT = 2 # Seconds
+const CURL_TIMEOUT = 10 # Seconds
 
 
 proc `/`(x, y: string): string =
