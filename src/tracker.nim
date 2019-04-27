@@ -69,10 +69,14 @@ proc update*(t: RepositoryTracker) =
          let revisions_to_post = get_log(t.svn_object, first, last,
                                          [t.repository.branch])
          for r in revisions_to_post:
-            post_revision(Revision(repository: t.repository.id,
-                                   revision: "r" & $r.revision,
-                                   description: r.message,
-                                   timestamp: r.timestamp))
+            try:
+               post_revision(Revision(repository: t.repository.id,
+                                      revision: "r" & $r.revision,
+                                      description: r.message,
+                                      timestamp: r.timestamp))
+            except AlassoError:
+               # TODO: Write a log message.
+               return
          first = last + 1
          last = min(first + UPDATE_BATCH_SIZE, server_latest)
 
