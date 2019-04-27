@@ -20,6 +20,11 @@ proc timer_create*(a1: ClockId, a2: ptr SigEvent = nil, a3: var Timer): cint
    {.importc, header: "<time.h>".}
 
 
+proc timer_settime*(a1: Timer, a2: cint, a3: var Itimerspec,
+                    a4: ptr Itimerspec = nil): cint
+   {.importc, header: "<time.h>".}
+
+
 proc sigalrm_handler(x: cint) {.noconv.} =
    discard
 
@@ -81,12 +86,8 @@ if sigaction(SIGPIPE, pipe_action, nil) < 0:
 if timer_create(CLOCK_REALTIME, nil, timer) < 0:
    quit(ESIGNAL)
 
-var new_time, old_time: Itimerspec
-new_time.it_value = Timespec(tv_sec: Time(10), tv_nsec: 0)
-new_time.it_interval = Timespec(tv_sec: Time(10), tv_nsec: 0)
-if timer_settime(timer, 0, new_time, old_time) < 0:
-   quit(ESIGNAL)
-
+var tspec: Itimerspec
+tspec.it_value = Timespec(tv_sec: Time(10), tv_nsec: 0)
 var trackers: seq[RepositoryTracker]
 var ecode = ESUCCESS
 while not do_exit:
@@ -97,6 +98,8 @@ while not do_exit:
          destroy_session = false
       create(trackers)
       update(trackers)
+      if timer_settime(timer, 0, tspec) < 0:
+         break
       discard sigsuspend(empty_sigset)
    except:
       ecode = ESIGNAL
