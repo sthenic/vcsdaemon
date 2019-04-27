@@ -8,7 +8,7 @@ import ../lib/svn/libsvn
 # Version information
 const VERSION_STR = "0.1.0"
 
-# Exit codes: negative values are
+# Exit codes: negative values indicate errors.
 const ESUCCESS = 0
 const EINVAL = -1
 const EFORK = -2
