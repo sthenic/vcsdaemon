@@ -41,32 +41,35 @@ proc set_log_target*(target: LogTarget) =
 
 proc info*(msg: string, args: varargs[string, `$`]) =
    if log_target == SYSLOG:
-      syslog(LOG_INFO or LOG_DAEMON, format(msg, args))
+      for line in split_lines(format(msg, args)):
+         syslog(LOG_INFO or LOG_DAEMON, line)
    else:
-      let msg_split = wrap_words(format(msg, args), 80, true).split_lines()
+      let msg_split = split_lines(wrap_words(format(msg, args), 80, true))
       echo "INFO:    " & msg_split[0]
-      for m in 1..<len(msg_split):
-         echo "         " & msg_split[m]
+      for i in 1..<len(msg_split):
+         echo "         " & msg_split[i]
 
 
 proc warning*(msg: string, args: varargs[string, `$`]) =
    if log_target == SYSLOG:
-      syslog(LOG_WARNING or LOG_DAEMON, format(msg, args))
+      for line in split_lines(format(msg, args)):
+         syslog(LOG_WARNING or LOG_DAEMON, line)
    else:
-      let msg_split = wrap_words(format(msg, args), 80, true).split_lines()
+      let msg_split = split_lines(wrap_words(format(msg, args), 80, true))
       echo "WARNING: " & msg_split[0]
-      for m in 1..<len(msg_split):
-         echo "         " & msg_split[m]
+      for i in 1..<len(msg_split):
+         echo "         " & msg_split[i]
 
 
 proc error*(msg: string, args: varargs[string, `$`]) =
    if log_target == SYSLOG:
-      syslog(LOG_ERR or LOG_DAEMON, format(msg, args))
+      for line in split_lines(format(msg, args)):
+         syslog(LOG_ERR or LOG_DAEMON, line)
    else:
-      let msg_split = wrap_words(format(msg, args), 80, true).split_lines()
+      let msg_split = split_lines(wrap_words(format(msg, args), 80, true))
       echo "ERROR:   " & msg_split[0]
-      for m in 1..<len(msg_split):
-         echo "         " & msg_split[m]
+      for i in 1..<len(msg_split):
+         echo "         " & msg_split[i]
 
 
 proc abort*(e: typedesc[Exception], msg: string, args: varargs[string, `$`]) =

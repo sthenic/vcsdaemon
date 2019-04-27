@@ -51,16 +51,15 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
    var server_latest: SvnRevnum
    try:
       db_latest = get_latest_revision(t.repository.id, alasso_url)
-   except AlassoError:
-      log.abort(TrackerError,
-                "Failed to get latest revision from Alasso database at '$1'.",
-                alasso_url)
+   except AlassoError as e:
+      log.abort(TrackerError, "Failed to get latest revision from Alasso " &
+                "database at '$1' ($2).", alasso_url, e.msg)
    try:
-      server_latest = get_latest_log(t.svn_object, [t.repository.branch]).revision
-   except SvnError:
-      log.abort(TrackerError,
-                "Failed to get latest log entry from SVN server at '$1'.",
-                t.svn_object.url)
+      server_latest =
+         get_latest_log(t.svn_object, [t.repository.branch]).revision
+   except SvnError as e:
+      log.abort(TrackerError, "Failed to get latest log entry from SVN " &
+                "server at '$1'. ($2)", t.svn_object.url, e.msg)
 
    if server_latest > db_latest:
       # Issue updates in batches of UPDATE_BATCH_SIZE.
@@ -75,10 +74,9 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
                                       revision: "r" & $r.revision,
                                       description: r.message,
                                       timestamp: r.timestamp), alasso_url)
-            except AlassoError:
-               log.abort(TrackerError,
-                         "Failed to post revision to Alasso database at '$1'.",
-                         alasso_url)
+            except AlassoError as e:
+               log.abort(TrackerError, "Failed to post revision to Alasso " &
+                         "database at '$1'. ($2)", alasso_url, e.msg)
          first = last + 1
          last = min(first + UPDATE_BATCH_SIZE, server_latest)
 
@@ -94,10 +92,9 @@ proc create*(trackers: var seq[RepositoryTracker], alasso_url: string) =
    var repositories: seq[Repository]
    try:
       repositories = alasso.get_repositories(alasso_url)
-   except AlassoError:
-      log.abort(TrackerError,
-                "Failed to get repositories from Alasso database at '$1'.",
-                alasso_url)
+   except AlassoError as e:
+      log.abort(TrackerError, "Failed to get repositories from Alasso " &
+                "database at '$1'. ($2)", alasso_url, e.msg)
 
    for r in repositories:
       var already_tracked = false
@@ -117,8 +114,7 @@ proc create*(trackers: var seq[RepositoryTracker], alasso_url: string) =
          log.info("Adding tracker for repository:\n" &
                   "URL:    " & r.url & "\n" &
                   "Branch: " & r.branch)
-      except SvnError:
+      except SvnError as e:
          destroy(t)
-         log.abort(TrackerError,
-                   "Cannot establish a connection to the SVN server at '$1'.",
-                   r.url)
+         log.abort(TrackerError, "Cannot establish a connection to the SVN " &
+                   "server at '$1'. ($2)", r.url, e.msg)
