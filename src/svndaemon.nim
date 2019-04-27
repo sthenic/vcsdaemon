@@ -57,11 +57,14 @@ elif cli_state.print_version:
 elif cli_state.as_daemon:
    let pid = posix.fork()
    if pid < 0:
-      echo "Fork process failed."
+      log.error("Fork process failed.")
       quit(EFORK)
    elif pid > 0:
-      echo "Daemon created with ", pid, "."
+      log.info("Daemon created with PID '$1'.", pid)
       quit(ESUCCESS)
+   else:
+      # Daemon process uses the syslog facility.
+      log.set_log_target(SYSLOG)
 
 # Set up signals and actions.
 var empty_sigset: Sigset
@@ -106,5 +109,6 @@ while not do_exit:
       ecode = ECONN
       break
 
+log.info("Exit($1)", ecode)
 destroy(trackers)
 quit(ecode)
