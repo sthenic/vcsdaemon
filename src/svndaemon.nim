@@ -45,7 +45,6 @@ var cli_state: CliState
 try:
    cli_state = parse_cli()
 except CliValueError as e:
-   echo e.msg
    quit(EINVAL)
 
 # Parse CLI object state.

@@ -1,6 +1,8 @@
 import parseopt
 import strutils
 
+import ./log
+
 type
    CliValueError* = object of Exception
 
@@ -9,11 +11,6 @@ type
       print_version*: bool
       as_daemon*: bool
       alasso_url*: string
-
-
-proc new_cli_error(msg: string, args: varargs[string, `$`]): ref CliValueError =
-   new result
-   result.msg = format(msg, args)
 
 
 proc parse_cli*(): CliState =
@@ -34,11 +31,11 @@ proc parse_cli*(): CliState =
             result.as_daemon = true
          of "alasso-url":
             if len(val) == 0:
-               raise new_cli_error("Option --alasso-url expects a value.")
+               log.abort(CliValueError, "Option --alasso-url expects a value.")
             result.alasso_url = val
          else:
-            raise new_cli_error("Unknown option '$1'.", key)
+            log.abort(CliValueError, "Unknown option '$1'.", key)
 
       of cmdEnd:
-         raise new_cli_error("Failed to parse options and arguments " &
-                             "This should not have happened.")
+         log.abort(CliValueError, "Failed to parse options and arguments " &
+                                  "This should not have happened.")
