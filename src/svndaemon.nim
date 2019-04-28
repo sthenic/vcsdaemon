@@ -1,8 +1,8 @@
 import posix
 
-import ./cli
-import ./log
 import ./tracker
+import ./utils/log
+import ./utils/cli
 import ../lib/svn/libsvn
 
 # Version information

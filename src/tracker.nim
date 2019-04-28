@@ -1,7 +1,7 @@
 import strutils
 
-import ./log
 import ./alasso
+import ./utils/log
 import ../lib/svn/libsvn
 
 
