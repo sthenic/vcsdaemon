@@ -20,7 +20,6 @@ const STATIC_HELP_TEXT = static_read("../help.txt")
 let HELP_TEXT = "Svndaemon v" & VERSION_STR & "\n\n" & STATIC_HELP_TEXT
 
 var do_exit = false
-var destroy_session = false
 
 
 proc timer_create*(a1: ClockId, a2: ptr SigEvent = nil, a3: var Timer): cint
@@ -44,7 +43,7 @@ proc sigint_handler(x: cint) {.noconv.} =
 var cli_state: CliState
 try:
    cli_state = parse_cli()
-except CliValueError as e:
+except CliValueError:
    quit(EINVAL)
 
 # Parse CLI object state.
