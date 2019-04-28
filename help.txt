@@ -1,0 +1,14 @@
+usage:
+  svndaemon [OPTIONS]
+
+
+options:
+  -h, --help            Print this help message and exit.
+  -v, --version         Print the version information and exit.
+
+  -d, --daemon          Start the application as a daemon process. When running
+                        as a daemon, log messages will be written to
+                        '/var/log/syslog' instead of to stdout.
+
+  --alasso-url=URL      Specify the URL to the server hosting the Alasso
+                        database, e.g. 'http://localhost:5000'.

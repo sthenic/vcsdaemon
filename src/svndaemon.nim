@@ -16,6 +16,9 @@ const ESIGNAL = -3
 const ETIMER = -4
 const ECONN = -5
 
+const STATIC_HELP_TEXT = static_read("../help.txt")
+let HELP_TEXT = "Svndaemon v" & VERSION_STR & "\n\n" & STATIC_HELP_TEXT
+
 var do_exit = false
 var destroy_session = false
 
@@ -48,7 +51,7 @@ except CliValueError as e:
 # Parse CLI object state.
 if cli_state.print_help:
    # Show help text and exit.
-   echo "svndaemon v" & VERSION_STR
+   echo HELP_TEXT
    quit(ESUCCESS)
 elif cli_state.print_version:
    # Show version information and exit.
