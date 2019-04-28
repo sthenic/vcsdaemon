@@ -19,7 +19,6 @@ type
       pool: ptr AprPool
       session: ptr SvnRaSession
       is_session_open: bool
-      url*: string
    SvnLogObject* = object
       revision*: SvnRevnum
       timestamp*: int64
@@ -108,7 +107,6 @@ proc open_session*(o: var SvnObject, url: string) =
       raise new_svn_error("Failed to open SVN session.")
 
    o.is_session_open = true
-   o.url = url
 
 
 proc get_latest_revnum*(o: SvnObject): SvnRevnum =

@@ -69,7 +69,7 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
          get_latest_log(t.svn_object, [t.repository.branch]).revision
    except SvnError as e:
       log.abort(TrackerError, "Failed to get latest log entry from SVN " &
-                "server at '$1'. ($2)", t.svn_object.url, e.msg)
+                "server at '$1'. ($2)", t.repository.url, e.msg)
 
    if server_latest > db_latest:
       # Issue updates in batches of UPDATE_BATCH_SIZE.
