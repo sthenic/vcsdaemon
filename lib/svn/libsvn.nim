@@ -131,8 +131,7 @@ proc get_log_object(log_entry: ptr SvnLogEntry, pool: ptr AprPool):
             not is_nil(parse_date(addr(matched), addr(t), value, 0, pool)) or
             matched == SVN_FALSE
          ):
-            raise new_svn_error("Failed to parse time string '$1'.",
-                                       value)
+            raise new_svn_error("Failed to parse time string '$1'.", value)
          result.timestamp = cast[int64](time_sec(t))
       of "svn:log":
          result.message = $value
@@ -146,7 +145,7 @@ proc on_get_log(baton: pointer, log_entry: ptr SvnLogEntry,
                 pool: ptr AprPool): ptr SvnLibError {.cdecl.} =
    if is_nil(baton):
       raise new_svn_error("Invalid reference to memory passed as log " &
-                                 "entry baton.")
+                          "entry baton.")
    add(cast[var seq[SvnLogObject]](baton), get_log_object(log_entry, pool))
    result = SVN_NO_ERROR
 
