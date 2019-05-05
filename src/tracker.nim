@@ -7,18 +7,13 @@ import ../lib/svn/libsvn
 
 type
    TrackerError* = object of Exception
+   TrackerTimeoutError* = object of TrackerError
    RepositoryTracker* = object
       repository*: Repository
       svn_object*: SvnObject
       is_open: bool
 
 const UPDATE_BATCH_SIZE = 30
-
-
-proc new_tracker_error(msg: string, args: varargs[string, `$`]):
-      ref TrackerError =
-   new result
-   result.msg = format(msg, args)
 
 
 proc init*(t: var RepositoryTracker) =
@@ -55,12 +50,15 @@ proc info(revisions: openarray[SvnLogObject], first, last: int): string =
 
 proc update*(t: RepositoryTracker, alasso_url: string) =
    if not t.is_open:
-      raise new_tracker_error("Tracker is not active.")
+      log.abort(TrackerError, "Tracker is not active.")
 
    var db_latest: int
    var server_latest: SvnRevnum
    try:
       db_latest = get_latest_revision(t.repository.id, alasso_url)
+   except AlassoTimeoutError:
+      log.abort(TrackerTimeoutError, "Failed to get latest revision from " &
+                "Alasso database at '$1'. Operation timed out.", alasso_url)
    except AlassoError as e:
       log.abort(TrackerError, "Failed to get latest revision from Alasso " &
                 "database at '$1' ($2).", alasso_url, e.msg)
@@ -84,6 +82,10 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
                                       revision: "r" & $r.revision,
                                       description: r.message,
                                       timestamp: r.timestamp), alasso_url)
+            except AlassoTimeoutError:
+               log.abort(TrackerTimeoutError, "Failed to post revision to " &
+                         "Alasso database at '$1'. Operation timed out.",
+                         alasso_url)
             except AlassoError as e:
                log.abort(TrackerError, "Failed to post revision to Alasso " &
                          "database at '$1'. ($2)", alasso_url, e.msg)
@@ -108,6 +110,9 @@ proc create*(trackers: var seq[RepositoryTracker], alasso_url: string) =
    var repositories: seq[Repository]
    try:
       repositories = alasso.get_repositories(alasso_url)
+   except AlassoTimeoutError:
+      log.abort(TrackerTimeoutError, "Failed to get repositories from Alasso " &
+                "database at '$1'. Operation timed out.", alasso_url)
    except AlassoError as e:
       log.abort(TrackerError, "Failed to get repositories from Alasso " &
                 "database at '$1'. ($2)", alasso_url, e.msg)

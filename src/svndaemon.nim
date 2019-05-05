@@ -102,6 +102,11 @@ while not do_exit:
          ecode = ETIMER
          break
       discard sigsuspend(empty_sigset)
+   except TrackerTimeoutError:
+      # Break the loop unless --restart-on-timeout is specified.
+      if not cli_state.restart_on_timeout:
+         ecode = ECONN
+         break
    except TrackerError:
       ecode = ECONN
       break

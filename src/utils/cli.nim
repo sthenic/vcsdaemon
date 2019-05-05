@@ -11,6 +11,7 @@ type
       print_version*: bool
       as_daemon*: bool
       alasso_url*: string
+      restart_on_timeout*: bool
 
 
 proc parse_cli*(): CliState =
@@ -33,6 +34,8 @@ proc parse_cli*(): CliState =
             if len(val) == 0:
                log.abort(CliValueError, "Option --alasso-url expects a value.")
             result.alasso_url = val
+         of "restart-on-timeout":
+            result.restart_on_timeout = true
          else:
             log.abort(CliValueError, "Unknown option '$1'.", key)
 

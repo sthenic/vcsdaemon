@@ -5,6 +5,7 @@ import uri
 
 type
    AlassoError* = object of Exception
+   AlassoTimeoutError* = object of AlassoError
 
    Repository* = object
       id*: int
@@ -30,8 +31,16 @@ proc new_alasso_error(msg: string, args: varargs[string, `$`]):
    result.msg = format(msg, args)
 
 
+proc new_alasso_timeout_error(msg: string, args: varargs[string, `$`]):
+      ref AlassoTimeoutError =
+   new result
+   result.msg = format(msg, args)
+
+
 proc check_curl(code: Code) =
-   if code != E_OK:
+   if code == E_OPERATION_TIMEOUTED:
+      raise new_alasso_timeout_error("CURL timeout: " & $easy_strerror(code))
+   elif code != E_OK:
       raise new_alasso_error("CURL failed: " & $easy_strerror(code))
 
 
