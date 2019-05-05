@@ -119,6 +119,8 @@ proc post_revision*(revision: Revision, url: string) =
       curl.easy_cleanup()
    var list: Pslist
    list = slist_append(list, "content-type: application/vnd.api+json")
+   defer:
+      slist_free_all(list)
    check_curl(curl.easy_setopt(OPT_URL, url / "api" / "revision"))
    check_curl(curl.easy_setopt(OPT_POST, 1))
    check_curl(curl.easy_setopt(OPT_POSTFIELDS, $get_json(revision)))
@@ -126,4 +128,3 @@ proc post_revision*(revision: Revision, url: string) =
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write_ignore))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
    check_curl(curl.easy_perform())
-   slist_free_all(list)
