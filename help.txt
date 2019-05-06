@@ -12,3 +12,7 @@ options:
 
   --alasso-url=URL      Specify the URL to the server hosting the Alasso
                         database, e.g. 'http://localhost:5000'.
+
+  --restart-on-timeout  If specified, the application will not exit with an
+                        error if an operation times out, e.g. if the CURL
+                        request to Alasso takes too long to complete.
