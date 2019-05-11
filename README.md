@@ -1,7 +1,7 @@
 [![NIM](https://img.shields.io/badge/Nim-0.19.4-orange.svg?style=flat-square)](https://nim-lang.org)
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-# README
+# Svndaemon
 
 This application is a Linux daemon to track log entries of the SVN repositories listed in an [Alasso](https://gitlab.com/sthenic/alasso) database. The goal is to maintain a reflection of the revision metadata from the target repositories in the Alasso database.
 
