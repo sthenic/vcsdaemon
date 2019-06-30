@@ -12,9 +12,9 @@ type
       label*, description*, url*, branch*: string
       is_archived*: bool
 
-   Revision* = object
+   Commit* = object
       repository*: int
-      revision*, description*: string
+      uid*, message*: string
       timestamp*: int64
 
 
@@ -84,12 +84,12 @@ proc get_repositories*(url: string): seq[Repository] =
       add(result, parse_repository(r))
 
 
-proc get_latest_revision*(repository: int, url: string): int =
+proc get_latest_commit*(repository: int, url: string): int =
    let curl = libcurl.easy_init()
    defer:
       curl.easy_cleanup()
    var str = ""
-   let url = url / "api/revision/latest?filter=" & encode_url(format(
+   let url = url / "api/commit/latest?filter=" & encode_url(format(
       """[{"attribute": "repository", "value": "$1"}]""",
       $repository
    ))
@@ -103,16 +103,16 @@ proc get_latest_revision*(repository: int, url: string): int =
    if node["data"].kind == JNull:
       result = 0
    else:
-      result = parse_int(get_str(node["data"]["attributes"]["revision"])[1..^1])
+      result = parse_int(get_str(node["data"]["attributes"]["uid"])[1..^1])
 
 
-proc get_json(r: Revision): JsonNode =
+proc get_json(r: Commit): JsonNode =
    result = %*{
       "data": {
-         "type": "revision",
+         "type": "commit",
          "attributes": {
-            "revision": r.revision,
-            "description": r.description,
+            "uid": r.uid,
+            "message": r.message,
             "timestamp": $r.timestamp
          },
          "relationships": {
@@ -122,7 +122,7 @@ proc get_json(r: Revision): JsonNode =
    }
 
 
-proc post_revision*(revision: Revision, url: string) =
+proc post_commit*(commit: Commit, url: string) =
    let curl = libcurl.easy_init()
    defer:
       curl.easy_cleanup()
@@ -130,9 +130,9 @@ proc post_revision*(revision: Revision, url: string) =
    list = slist_append(list, "content-type: application/vnd.api+json")
    defer:
       slist_free_all(list)
-   check_curl(curl.easy_setopt(OPT_URL, url / "api" / "revision"))
+   check_curl(curl.easy_setopt(OPT_URL, url / "api" / "commit"))
    check_curl(curl.easy_setopt(OPT_POST, 1))
-   check_curl(curl.easy_setopt(OPT_POSTFIELDS, $get_json(revision)))
+   check_curl(curl.easy_setopt(OPT_POSTFIELDS, $get_json(commit)))
    check_curl(curl.easy_setopt(OPT_HTTPHEADER, list))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write_ignore))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))

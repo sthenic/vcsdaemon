@@ -55,7 +55,7 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
    var db_latest: int
    var server_latest: SvnRevnum
    try:
-      db_latest = get_latest_revision(t.repository.id, alasso_url)
+      db_latest = get_latest_commit(t.repository.id, alasso_url)
    except AlassoTimeoutError:
       log.abort(TrackerTimeoutError, "Failed to get latest revision from " &
                 "Alasso database at '$1'. Operation timed out.", alasso_url)
@@ -78,10 +78,10 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
                                          [t.repository.branch])
          for r in revisions_to_post:
             try:
-               post_revision(Revision(repository: t.repository.id,
-                                      revision: "r" & $r.revision,
-                                      description: r.message,
-                                      timestamp: r.timestamp), alasso_url)
+               post_commit(Commit(repository: t.repository.id,
+                                  uid: "r" & $r.revision,
+                                  message: r.message,
+                                  timestamp: r.timestamp), alasso_url)
             except AlassoTimeoutError:
                log.abort(TrackerTimeoutError, "Failed to post revision to " &
                          "Alasso database at '$1'. Operation timed out.",
