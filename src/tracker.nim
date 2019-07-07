@@ -81,6 +81,7 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
                post_commit(Commit(repository: t.repository.id,
                                   uid: "r" & $r.revision,
                                   message: r.message,
+                                  author: r.author,
                                   timestamp: r.timestamp), alasso_url)
             except AlassoTimeoutError:
                log.abort(TrackerTimeoutError, "Failed to post revision to " &

@@ -14,7 +14,7 @@ type
 
    Commit* = object
       repository*: int
-      uid*, message*: string
+      uid*, message*, author*: string
       timestamp*: int64
 
 
@@ -106,17 +106,18 @@ proc get_latest_commit*(repository: int, url: string): int =
       result = parse_int(get_str(node["data"]["attributes"]["uid"])[1..^1])
 
 
-proc get_json(r: Commit): JsonNode =
+proc get_json(c: Commit): JsonNode =
    result = %*{
       "data": {
          "type": "commit",
          "attributes": {
-            "uid": r.uid,
-            "message": r.message,
-            "timestamp": $r.timestamp
+            "uid": c.uid,
+            "message": c.message,
+            "author": c.author,
+            "timestamp": $c.timestamp
          },
          "relationships": {
-            "repository": {"data": {"id": $r.repository, "type": "repository"}}
+            "repository": {"data": {"id": $c.repository, "type": "repository"}}
          }
       }
    }
