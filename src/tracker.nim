@@ -52,10 +52,10 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
    if not t.is_open:
       log.abort(TrackerError, "Tracker is not active.")
 
-   var db_latest: int
-   var server_latest: SvnRevnum
+   var db_latest_revnum, db_latest_id: int
+   var server_latest_revnum: SvnRevnum
    try:
-      db_latest = get_latest_commit(t.repository.id, alasso_url)
+      (db_latest_revnum, db_latest_id) = get_latest_commit(t.repository.id, alasso_url)
    except AlassoTimeoutError:
       log.abort(TrackerTimeoutError, "Failed to get latest revision from " &
                 "Alasso database at '$1'. Operation timed out.", alasso_url)
@@ -63,26 +63,32 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
       log.abort(TrackerError, "Failed to get latest revision from Alasso " &
                 "database at '$1' ($2).", alasso_url, e.msg)
    try:
-      server_latest =
+      server_latest_revnum =
          get_latest_log(t.svn_object, [t.repository.branch]).revision
    except SvnError as e:
       log.abort(TrackerError, "Failed to get latest log entry from SVN " &
                 "server at '$1'. ($2)", t.repository.url, e.msg)
 
-   if server_latest > db_latest:
+   if server_latest_revnum > db_latest_revnum:
       # Issue updates in batches of UPDATE_BATCH_SIZE.
-      var first = db_latest + 1
-      var last = min(first + UPDATE_BATCH_SIZE, server_latest)
+      var first = db_latest_revnum + 1
+      var last = min(first + UPDATE_BATCH_SIZE, server_latest_revnum)
+      var parent = db_latest_id
       while (first <= last):
          let revisions_to_post = get_log(t.svn_object, first, last,
                                          [t.repository.branch])
          for r in revisions_to_post:
             try:
-               post_commit(Commit(repository: t.repository.id,
-                                  uid: "r" & $r.revision,
-                                  message: r.message,
-                                  author: r.author,
-                                  timestamp: r.timestamp), alasso_url)
+               parent = post_commit(
+                  Commit(repository: t.repository.id,
+                         uid: "r" & $r.revision,
+                         message: r.message,
+                         author: r.author,
+                         parent: parent,
+                         timestamp: r.timestamp,
+                         author_timestamp: r.timestamp),
+                  alasso_url
+               )
             except AlassoTimeoutError:
                log.abort(TrackerTimeoutError, "Failed to post revision to " &
                          "Alasso database at '$1'. Operation timed out.",
@@ -97,7 +103,7 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
                      info(revisions_to_post, first, last), t.repository.url,
                      t.repository.branch, t.repository.id)
          first = last + 1
-         last = min(first + UPDATE_BATCH_SIZE, server_latest)
+         last = min(first + UPDATE_BATCH_SIZE, server_latest_revnum)
 
 
 proc update*(trackers: openarray[RepositoryTracker], alasso_url: string) =
