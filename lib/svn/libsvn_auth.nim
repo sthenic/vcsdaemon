@@ -1,5 +1,3 @@
-import strutils
-
 import ../apr/libapr
 import libsvn_types
 

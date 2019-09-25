@@ -3,7 +3,6 @@ import posix
 import ./tracker
 import ./utils/log
 import ./utils/cli
-import ../lib/svn/libsvn
 
 # Version information
 const VERSION_STR = "0.1.0"
