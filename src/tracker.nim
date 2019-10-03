@@ -126,12 +126,25 @@ proc create*(trackers: var seq[RepositoryTracker], alasso_url: string) =
 
    for r in repositories:
       var already_tracked = false
-      for t in trackers:
-         # Check that a tracker does not yet exist.
+      var remove_tracker_index = -1
+      # Check that a tracker does not yet exist. If it does check the archive
+      # status to decide if the tracker should be removed.
+      for i, t in trackers:
          if t.repository == r:
+            if r.is_archived:
+               remove_tracker_index = i
             already_tracked = true
             break
-      if already_tracked:
+
+      if remove_tracker_index > 0:
+         log.info("Removing tracker for repository:\n" &
+                  "URL:    " & r.url & "\n" &
+                  "Branch: " & r.branch)
+         destroy(trackers[remove_tracker_index])
+         del(trackers, remove_tracker_index)
+         continue
+
+      if r.is_archived or already_tracked:
          continue
 
       var t: RepositoryTracker
@@ -144,5 +157,5 @@ proc create*(trackers: var seq[RepositoryTracker], alasso_url: string) =
                   "Branch: " & r.branch)
       except SvnError as e:
          destroy(t)
-         log.abort(TrackerError, "Cannot establish a connection to the SVN " &
-                   "server at '$1'. ($2)", r.url, e.msg)
+         log.warning("Cannot establish a connection to the SVN " &
+                     "server at '$1', skipping. ($2)", r.url, e.msg)
