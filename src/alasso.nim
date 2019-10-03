@@ -9,7 +9,7 @@ type
 
    Repository* = object
       id*: int
-      label*, description*, url*, branch*: string
+      label*, description*, url*, branch*, vcs*: string
       is_archived*: bool
 
    Commit* = object
@@ -23,6 +23,10 @@ const CURL_TIMEOUT = 10 # Seconds
 
 proc `/`(x, y: string): string =
    result = x & "/" & y
+
+
+proc `==`*(x, y: Repository): bool =
+   result = (x.id == y.id) and (x.url == y.url) and (x.branch == y.branch)
 
 
 proc new_alasso_error(msg: string, args: varargs[string, `$`]):
@@ -65,6 +69,7 @@ proc parse_repository(n: JsonNode): Repository =
       description: get_str(n["attributes"]["description"]),
       url: get_str(n["attributes"]["url"]),
       branch: get_str(n["attributes"]["branch"]),
+      vcs: get_str(n["attributes"]["vcs"]),
       is_archived: get_bool(n["attributes"]["is_archived"])
    )
 
@@ -73,15 +78,18 @@ proc get_repositories*(url: string): seq[Repository] =
    let curl = libcurl.easy_init()
    defer:curl.easy_cleanup()
    var str = ""
-   check_curl(curl.easy_setopt(OPT_URL, url / "api" / "repository"))
+   check_curl(curl.easy_setopt(OPT_URL,
+                               url / "api" / "repository?show_archived=true"))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
    check_curl(curl.easy_perform())
 
    let node = json.parse_json(str)
-   for r in items(node["data"]):
-      add(result, parse_repository(r))
+   for repository_json in items(node["data"]):
+      let repository = parse_repository(repository_json)
+      if repository.vcs == "subversion":
+         add(result, repository)
 
 
 proc get_latest_commit*(repository: int, url: string): tuple[revnum, parent: int] =
