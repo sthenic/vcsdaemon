@@ -96,23 +96,34 @@ while not do_exit:
    try:
       create(trackers, cli_state.alasso_url)
       update(trackers, cli_state.alasso_url)
-      if timer_settime(timer, 0, tspec) < 0:
-         log.error("Failed to set timer.")
-         ecode = ETIMER
-         break
-      discard sigsuspend(empty_sigset)
    except TrackerTimeoutError:
       # Break the loop unless --restart-on-timeout is specified.
       if not cli_state.restart_on_timeout:
          ecode = ECONN
          break
+   except TrackerFatalError as e:
+      # We have to destroy the tracker on a fatal error, libsvn may have
+      # emitted a SIGPIPE error requiring us to reset the session.
+      destroy(trackers[e.id])
+      del(trackers, e.id)
+      if not cli_state.restart_on_error:
+         ecode = ECONN
+         break
    except TrackerError:
-      ecode = ECONN
-      break
+      if not cli_state.restart_on_error:
+         ecode = ECONN
+         break
    except Exception as e:
       log.error("(Unknown) '$1'", e.msg)
       ecode = ECONN
       break
+
+   # Suspend the process until next update.
+   if timer_settime(timer, 0, tspec) < 0:
+      log.error("Failed to set timer.")
+      ecode = ETIMER
+      break
+   discard sigsuspend(empty_sigset)
 
 log.info("Exit($1)", ecode)
 destroy(trackers)

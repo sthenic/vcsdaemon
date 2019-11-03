@@ -8,6 +8,8 @@ import ../lib/svn/libsvn
 type
    TrackerError* = object of Exception
    TrackerTimeoutError* = object of TrackerError
+   TrackerFatalError* = object of TrackerError
+      id*: int
    RepositoryTracker* = object
       repository*: Repository
       svn_object*: SvnObject
@@ -16,12 +18,24 @@ type
 const UPDATE_BATCH_SIZE = 30
 
 
+proc abort(t: typedesc[TrackerFatalError], id: int, msg: string,
+           args: varargs[string, `$`]) =
+   log.error(msg, args)
+   var tracker_error = new_exception(TrackerFatalError, format(msg, args))
+   tracker_error.id = id
+   raise tracker_error
+
+
 proc init*(t: var RepositoryTracker) =
    t.svn_object = new SvnObject
    libsvn.init(t.svn_object)
 
 
 proc destroy*(t: var RepositoryTracker) =
+   if t.repository.id > 0:
+      log.info("Removing tracker for repository:\n" &
+               "URL:    " & t.repository.url & "\n" &
+               "Branch: " & t.repository.branch)
    if not is_nil(t.svn_object):
       destroy(t.svn_object)
 
@@ -48,7 +62,7 @@ proc info(revisions: openarray[SvnLogObject], first, last: int): string =
                $first & " - r" & $last
 
 
-proc update*(t: RepositoryTracker, alasso_url: string) =
+proc update*(t: RepositoryTracker, id: int, alasso_url: string) =
    if not t.is_open:
       log.abort(TrackerError, "Tracker is not active.")
 
@@ -66,8 +80,8 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
       server_latest_revnum =
          get_latest_log(t.svn_object, [t.repository.branch]).revision
    except SvnError as e:
-      log.abort(TrackerError, "Failed to get latest log entry from SVN " &
-                "server at '$1'. ($2)", t.repository.url, e.msg)
+      abort(TrackerFatalError, id, "Failed to get latest log entry from SVN " &
+            "server at '$1'. ($2)", t.repository.url, e.msg)
 
    if server_latest_revnum > db_latest_revnum:
       # Issue updates in batches of UPDATE_BATCH_SIZE.
@@ -107,8 +121,8 @@ proc update*(t: RepositoryTracker, alasso_url: string) =
 
 
 proc update*(trackers: openarray[RepositoryTracker], alasso_url: string) =
-   for t in trackers:
-      update(t, alasso_url)
+   for i, t in trackers:
+      update(t, i, alasso_url)
 
 
 proc create*(trackers: var seq[RepositoryTracker], alasso_url: string) =
@@ -137,9 +151,6 @@ proc create*(trackers: var seq[RepositoryTracker], alasso_url: string) =
             break
 
       if remove_tracker_index > 0:
-         log.info("Removing tracker for repository:\n" &
-                  "URL:    " & r.url & "\n" &
-                  "Branch: " & r.branch)
          destroy(trackers[remove_tracker_index])
          del(trackers, remove_tracker_index)
          continue
