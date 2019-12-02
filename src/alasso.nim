@@ -76,6 +76,8 @@ proc parse_repository(n: JsonNode): Repository =
       vcs: get_str(n["attributes"]["vcs"]),
       is_archived: get_bool(n["attributes"]["is_archived"])
    )
+   # Make sure to strip away any trailing '/' from the URL.
+   result.url = strip(result.url, false, true, {'/'})
 
 
 proc get_repositories*(url: string): seq[Repository] =
