@@ -48,6 +48,10 @@ proc check_curl(code: Code) =
       raise new_alasso_error("CURL failed: " & $easy_strerror(code))
 
 
+proc get_response_code(curl: PCurl): int =
+   check_curl(curl.easy_getinfo(INFO_RESPONSE_CODE, addr(result)))
+
+
 proc on_write(data: ptr char, size: csize, nmemb: csize, user_data: pointer):
       csize =
    var user_data = cast[ptr string](user_data)
@@ -76,7 +80,8 @@ proc parse_repository(n: JsonNode): Repository =
 
 proc get_repositories*(url: string): seq[Repository] =
    let curl = libcurl.easy_init()
-   defer:curl.easy_cleanup()
+   defer:
+      curl.easy_cleanup()
    var str = ""
    check_curl(curl.easy_setopt(OPT_URL,
                                url / "api" / "repository?show_archived=true"))
@@ -84,6 +89,10 @@ proc get_repositories*(url: string): seq[Repository] =
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
    check_curl(curl.easy_perform())
+
+   let code = curl.get_response_code()
+   if code != 200: # Expect 200 OK
+      raise new_alasso_error("HTTP request failed: " & $code)
 
    let node = json.parse_json(str)
    for repository_json in items(node["data"]):
@@ -106,6 +115,10 @@ proc get_latest_commit*(repository: int, url: string): tuple[revnum, parent: int
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
    check_curl(curl.easy_perform())
+
+   let code = curl.get_response_code()
+   if code != 200: # Expect 200 OK
+      raise new_alasso_error("HTTP request failed: " & $code)
 
    let node = json.parse_json(str)
    if node["data"].kind == JNull:
@@ -160,6 +173,10 @@ proc post_commit*(commit: Commit, url: string): int =
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
    check_curl(curl.easy_perform())
+
+   let code = curl.get_response_code()
+   if code != 201: # Expect 201 Created
+      raise new_alasso_error("HTTP request failed: " & $code)
 
    let node = json.parse_json(str)
    if node["data"].kind == JNull:
