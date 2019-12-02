@@ -138,7 +138,8 @@ proc get_log_object(log_entry: ptr SvnLogEntry, pool: ptr AprPool):
       of "svn:author":
          result.author = $value
       else:
-         raise new_svn_error("Unknown revprop '$1'.", property)
+         # Ignore unknown properties.
+         discard
 
 
 proc on_get_log(baton: pointer, log_entry: ptr SvnLogEntry,
