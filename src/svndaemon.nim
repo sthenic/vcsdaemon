@@ -1,4 +1,5 @@
 import posix
+import times
 
 import ./tracker
 import ./utils/log
@@ -87,7 +88,9 @@ var timer: Timer
 if timer_create(CLOCK_REALTIME, nil, timer) < 0:
    quit(ETIMER)
 var tspec: Itimerspec
-tspec.it_value = Timespec(tv_sec: Time(10), tv_nsec: 0)
+tspec.it_value = Timespec(tv_sec: posix.Time(10), tv_nsec: 0)
+
+log.info("Svndaemon started $1.", utc(times.now()))
 
 # Main program loop.
 var trackers: seq[RepositoryTracker]
