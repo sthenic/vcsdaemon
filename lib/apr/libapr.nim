@@ -13,7 +13,7 @@ type
    AprFile* {.bycopy.} = object
    AprAbortFunc* = proc (retcode: cint): cint {.cdecl.}
    AprStatus* = cint
-   AprSize* = csize
+   AprSize* = csize_t
    AprSsize* = clong
    AprOff* = clong
    AprArrayHeader* {.bycopy.} = object

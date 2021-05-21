@@ -14,7 +14,7 @@ const
    SVN_LATEST_REVISION* = SVN_INVALID_REVNUM
 
 type
-   SvnError* = object of Exception
+   SvnError* = object of ValueError
    SvnObject* = ref object
       pool: ptr AprPool
       session: ptr SvnRaSession
@@ -55,7 +55,7 @@ proc prompt_helper(cred: ptr ptr SvnAuthCredSimple;
                    baton: pointer; realm: cstring;
                    username: cstring; may_save: SvnBoolean;
                    pool: ptr AprPool): ptr SvnLibError {.cdecl.} =
-   var ret = cast[ptr SvnAuthCredSimple](palloc(pool, sizeof(SvnAuthCredSimple)))
+   var ret = cast[ptr SvnAuthCredSimple](palloc(pool, AprSize(sizeof(SvnAuthCredSimple))))
    echo "Authentication realm: " & $realm
    write(stdout, "Username: ")
    let username = read_line(stdin)

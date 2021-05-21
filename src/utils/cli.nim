@@ -4,7 +4,7 @@ import strutils
 import ./log
 
 type
-   CliValueError* = object of Exception
+   CliValueError* = object of ValueError
 
    CliState* = object
       print_help*: bool

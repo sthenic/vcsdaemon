@@ -6,7 +6,7 @@ import ../lib/svn/libsvn
 
 
 type
-   TrackerError* = object of Exception
+   TrackerError* = object of ValueError
    TrackerTimeoutError* = object of TrackerError
    TrackerFatalError* = object of TrackerError
       id*: int

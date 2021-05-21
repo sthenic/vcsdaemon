@@ -4,7 +4,7 @@ import json
 import uri
 
 type
-   AlassoError* = object of Exception
+   AlassoError* = object of ValueError
    AlassoTimeoutError* = object of AlassoError
 
    Repository* = object
@@ -29,14 +29,12 @@ proc `==`*(x, y: Repository): bool =
    result = (x.id == y.id) and (x.url == y.url) and (x.branch == y.branch)
 
 
-proc new_alasso_error(msg: string, args: varargs[string, `$`]):
-      ref AlassoError =
+proc new_alasso_error(msg: string, args: varargs[string, `$`]): ref AlassoError =
    new result
    result.msg = format(msg, args)
 
 
-proc new_alasso_timeout_error(msg: string, args: varargs[string, `$`]):
-      ref AlassoTimeoutError =
+proc new_alasso_timeout_error(msg: string, args: varargs[string, `$`]): ref AlassoTimeoutError =
    new result
    result.msg = format(msg, args)
 
@@ -52,17 +50,15 @@ proc get_response_code(curl: PCurl): int =
    check_curl(curl.easy_getinfo(INFO_RESPONSE_CODE, addr(result)))
 
 
-proc on_write(data: ptr char, size: csize, nmemb: csize, user_data: pointer):
-      csize =
+proc on_write(data: ptr char, size: csize_t, nmemb: csize_t, user_data: pointer): csize_t =
    var user_data = cast[ptr string](user_data)
    var buffer = new_string(size * nmemb)
    copy_mem(addr buffer[0], data, len(buffer))
    add(user_data[], buffer)
-   result = len(buffer).csize
+   result = len(buffer).csize_t
 
 
-proc on_write_ignore(data: ptr char, size: csize, nmemb: csize,
-                     user_data: pointer): csize =
+proc on_write_ignore(data: ptr char, size: csize_t, nmemb: csize_t, user_data: pointer): csize_t =
    result = size * nmemb
 
 
