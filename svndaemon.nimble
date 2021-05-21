@@ -1,4 +1,4 @@
-version = "0.1.0"
+version = "0.1.1"
 author = "Marcus Eriksson"
 description = "A Linux daemon to track log entries of SVN repositories."
 src_dir = "src"

@@ -6,7 +6,7 @@ import ./utils/log
 import ./utils/cli
 
 # Version information
-const VERSION_STR = "0.1.0"
+const VERSION_STR = "0.1.1"
 
 # Exit codes: negative values indicate errors.
 const ESUCCESS = 0
