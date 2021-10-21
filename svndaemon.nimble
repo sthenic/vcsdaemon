@@ -9,3 +9,4 @@ skip_dirs = @["tests"]
 
 requires "nim >= 1.4.6"
 requires "libcurl >= 1.0.0"
+requires "nimgit2 >= 0.3.4"

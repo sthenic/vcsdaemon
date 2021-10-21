@@ -61,8 +61,8 @@ proc prompt_helper(cred: ptr ptr SvnAuthCredSimple;
    let username = read_line(stdin)
    let password = read_password_from_stdin("Password: ")
 
-   ret.username = username
-   ret.password = password
+   ret.username = cstring(username)
+   ret.password = cstring(password)
    ret.may_save = may_save
 
    if not is_nil(cred):

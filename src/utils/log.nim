@@ -42,7 +42,7 @@ proc set_log_target*(target: LogTarget) =
 proc info*(msg: string, args: varargs[string, `$`]) =
    if log_target == SYSLOG:
       for line in split_lines(format(msg, args)):
-         syslog(LOG_INFO or LOG_DAEMON, line)
+         syslog(LOG_INFO or LOG_DAEMON, cstring(line))
    else:
       let msg_split = split_lines(wrap_words(format(msg, args), 80, true))
       echo "INFO:    " & msg_split[0]
@@ -53,7 +53,7 @@ proc info*(msg: string, args: varargs[string, `$`]) =
 proc warning*(msg: string, args: varargs[string, `$`]) =
    if log_target == SYSLOG:
       for line in split_lines(format(msg, args)):
-         syslog(LOG_WARNING or LOG_DAEMON, line)
+         syslog(LOG_WARNING or LOG_DAEMON, cstring(line))
    else:
       let msg_split = split_lines(wrap_words(format(msg, args), 80, true))
       echo "WARNING: " & msg_split[0]
@@ -64,7 +64,7 @@ proc warning*(msg: string, args: varargs[string, `$`]) =
 proc error*(msg: string, args: varargs[string, `$`]) =
    if log_target == SYSLOG:
       for line in split_lines(format(msg, args)):
-         syslog(LOG_ERR or LOG_DAEMON, line)
+         syslog(LOG_ERR or LOG_DAEMON, cstring(line))
    else:
       let msg_split = split_lines(wrap_words(format(msg, args), 80, true))
       echo "ERROR:   " & msg_split[0]

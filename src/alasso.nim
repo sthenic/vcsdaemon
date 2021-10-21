@@ -82,7 +82,7 @@ proc get_repositories*(url: string): seq[Repository] =
       curl.easy_cleanup()
    var str = ""
    check_curl(curl.easy_setopt(OPT_URL,
-                               url / "api" / "repository?show_archived=true"))
+                               cstring(url / "api" / "repository?show_archived=true")))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
@@ -108,7 +108,7 @@ proc get_latest_commit*(repository: int, url: string): tuple[revnum, parent: int
       """[{"attribute": "repository", "value": "$1"}]""",
       $repository
    ))
-   check_curl(curl.easy_setopt(OPT_URL, url))
+   check_curl(curl.easy_setopt(OPT_URL, cstring(url)))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
@@ -163,9 +163,9 @@ proc post_commit*(commit: Commit, url: string): int =
    var str = ""
    defer:
       slist_free_all(list)
-   check_curl(curl.easy_setopt(OPT_URL, url / "api" / "commit"))
+   check_curl(curl.easy_setopt(OPT_URL, cstring(url / "api" / "commit")))
    check_curl(curl.easy_setopt(OPT_POST, 1))
-   check_curl(curl.easy_setopt(OPT_POSTFIELDS, $get_json(commit)))
+   check_curl(curl.easy_setopt(OPT_POSTFIELDS, cstring($get_json(commit))))
    check_curl(curl.easy_setopt(OPT_HTTPHEADER, list))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
