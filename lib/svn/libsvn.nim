@@ -117,8 +117,7 @@ proc get_latest_revnum*(o: SvnObject): SvnRevnum =
       raise new_svn_error("Failed to get revision number.")
 
 
-proc get_log_object(log_entry: ptr SvnLogEntry, pool: ptr AprPool):
-      SvnLogObject =
+proc get_log_object(log_entry: ptr SvnLogEntry, pool: ptr AprPool): SvnLogObject =
    result.revision = log_entry.revision
    for k, v in pairs(log_entry.revprops, pool):
       let property = $cast[cstring](k)
