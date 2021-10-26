@@ -4,6 +4,18 @@ else:
    raise new_exception(Exception, "Only supported on Linux")
 
 const OID_RAWSZ = 20
+const
+   SORT_NONE* = 0.cuint
+   SORT_TOPOLOGICAL* = (1 shl 0).cuint
+   SORT_TIME* = (1 shl 1).cuint
+   SORT_REVERSE* = (1 shl 2).cuint
+
+const
+   MERGE_ANALYSIS_NONE* = 0.cuint
+   MERGE_ANALYSIS_NORMAL* = (1 shl 0).cuint
+   MERGE_ANALYSIS_UP_TO_DATE* = (1 shl 1).cuint
+   MERGE_ANALYSIS_FASTFORWARD* = (1 shl 2).cuint
+   MERGE_ANALYSIS_UNBORN* = (1 shl 3).cuint
 
 type
    Repository* = object
@@ -15,6 +27,7 @@ type
    Transport* = object
    Tree* = object
    Index* = object
+   Commit* = object
 
    Oid* {.bycopy.} = object
       id: array[OID_RAWSZ, uint8]
@@ -139,14 +152,7 @@ type
       custom_headers*: StrArray
 
    RepositoryFetchheadForeachCb* =
-      proc (remote_url: cstring, oid: ptr Oid, is_merge: cuint, payload: pointer) {.cdecl.}
-
-   MergeAnalysis* {.pure.} = enum
-      NONE = 0
-      NORMAL = (1 shl 0)
-      UP_TO_DATE = (1 shl 1)
-      FASTFORWARD = (1 shl 2)
-      UNBORN = (1 shl 3)
+      proc (ref_name, remote_url: cstring, oid: ptr Oid, is_merge: cuint, payload: pointer): cint {.cdecl.}
 
    MergePreference* {.pure.} = enum
       NONE = 0
@@ -221,6 +227,17 @@ type
       perfdata_cb*: CheckoutPerfdataCb
       perfdata_payload*: pointer
 
+   Time* {.bycopy.} = object
+      # Seconds since epoch.
+      time*: int64
+      # Timezone offset, in minutes.
+      offset*: cint
+
+   Signature* {.bycopy.} = object
+      name*: cstring
+      email*: cstring
+      time*: Time
+
    GitError* {.bycopy.} = object
       message*: cstring
       klass*: cint
@@ -252,10 +269,13 @@ proc reference_name_to_id*(`out`: ptr Oid, repository: ptr Repository, name: cst
 proc oid_tostr_s*(oid: ptr Oid): cstring
    {.cdecl, importc: "git_oid_tostr_s", dynlib: libgit.}
 
+proc oid_cpy*(`out`, src: ptr Oid)
+   {.cdecl, importc: "git_oid_cpy", dynlib: libgit.}
+
 proc annotated_commit_lookup*(`out`: ptr ptr AnnotatedCommit, repository: ptr Repository, id: ptr Oid): cint
    {.cdecl, importc: "git_annotated_commit_lookup", dynlib: libgit.}
 
-proc merge_analysis*(analysis_out: ptr MergeAnalysis, preference_out: MergePreference,
+proc merge_analysis*(analysis_out: ptr cuint, preference_out: ptr MergePreference,
                      repository: ptr Repository, their_heads: ptr ptr AnnotatedCommit,
                      their_heads_len: csize_t): cint
    {.cdecl, importc: "git_merge_analysis", dynlib: libgit.}
@@ -263,7 +283,7 @@ proc merge_analysis*(analysis_out: ptr MergeAnalysis, preference_out: MergePrefe
 proc revwalk_new*(`out`: ptr ptr Revwalk, repository: ptr Repository): cint
    {.cdecl, importc: "git_revwalk_new", dynlib: libgit.}
 
-proc revwalk_sorting*(walk: ptr Revwalk, sort_mode: cuint): cint
+proc revwalk_sorting*(walk: ptr Revwalk, sort_mode: cuint)
    {.cdecl, importc: "git_revwalk_sorting", dynlib: libgit.}
 
 proc revwalk_push*(walk: ptr Revwalk, id: ptr Oid): cint
@@ -288,6 +308,15 @@ proc checkout_tree*(repository: ptr Repository, treeish: ptr Object, opts: ptr C
 proc reference_set_target*(`out`: ptr ptr Reference, reference: ptr Reference, id: ptr Oid, log_message: cstring): cint
    {.cdecl, importc: "git_reference_set_target", dynlib: libgit.}
 
+proc commit_lookup*(commit: ptr ptr Commit, repository: ptr Repository, id: ptr Oid): cint
+   {.cdecl, importc: "git_commit_lookup", dynlib: libgit.}
+
+proc commit_message*(commit: ptr Commit): cstring
+   {.cdecl, importc: "git_commit_message", dynlib: libgit.}
+
+proc commit_author*(commit: ptr Commit): ptr Signature
+   {.cdecl, importc: "git_commit_author", dynlib: libgit.}
+
 proc object_free*(o: ptr Object)
    {.cdecl, importc: "git_object_free", dynlib: libgit.}
 
@@ -302,3 +331,9 @@ proc repository_free*(r: ptr Repository)
 
 proc annotated_commit_free*(r: ptr AnnotatedCommit)
    {.cdecl, importc: "git_annotated_commit_free", dynlib: libgit.}
+
+proc commit_free*(r: ptr Commit)
+   {.cdecl, importc: "git_commit_free", dynlib: libgit.}
+
+proc revwalk_free*(r: ptr Revwalk)
+   {.cdecl, importc: "git_revwalk_free", dynlib: libgit.}
