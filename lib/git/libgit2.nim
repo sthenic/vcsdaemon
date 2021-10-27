@@ -17,6 +17,30 @@ const
    MERGE_ANALYSIS_FASTFORWARD* = (1 shl 2).cuint
    MERGE_ANALYSIS_UNBORN* = (1 shl 3).cuint
 
+const
+   CHECKOUT_NONE* = 0
+   CHECKOUT_SAFE* = (1 shl 0).cuint
+   CHECKOUT_FORCE* = (1 shl 1).cuint
+   CHECKOUT_RECREATE_MISSING* = (1 shl 2).cuint
+   CHECKOUT_ALLOW_CONFLICTS* = (1 shl 3).cuint
+   CHECKOUT_REMOVE_UNTRACKED* = (1 shl 4).cuint
+   CHECKOUT_REMOVE_IGNORED* = (1 shl 5).cuint
+   CHECKOUT_UPDATE_ONLY* = (1 shl 6).cuint
+   CHECKOUT_DONT_UPDATE_INDEX* = (1 shl 7).cuint
+   CHECKOUT_NO_REFRESH* = (1 shl 8).cuint
+   CHECKOUT_SKIP_UNMERGED* = (1 shl 9).cuint
+   CHECKOUT_USE_OURS* = (1 shl 10).cuint
+   CHECKOUT_USE_THEIRS* = (1 shl 11).cuint
+   CHECKOUT_DISABLE_PATHSPEC_MATCH* = (1 shl 12).cuint
+   CHECKOUT_SKIP_LOCKED_DIRECTORIES* = (1 shl 13).cuint
+   CHECKOUT_DONT_OVERWRITE_IGNORED* = (1 shl 14).cuint
+   CHECKOUT_CONFLICT_STYLE_MERGE* = (1 shl 15).cuint
+   CHECKOUT_CONFLICT_STYLE_DIFF3* = (1 shl 16).cuint
+   CHECKOUT_DONT_REMOVE_EXISTING* = (1 shl 17).cuint
+   CHECKOUT_DONT_WRITE_INDEX* = (1 shl 18).cuint
+   CHECKOUT_UPDATE_SUBMODULES* = (1 shl 19).cuint
+   CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED* = (1 shl 20).cuint
+
 type
    Repository* = object
    Remote* = object
@@ -262,8 +286,28 @@ proc repository_fetchhead_foreach*(repository: ptr Repository,
                                    callback: RepositoryFetchheadForeachCb, payload: pointer): cint
    {.cdecl, importc: "git_repository_fetchhead_foreach", dynlib: libgit.}
 
+proc repository_set_head*(repository: ptr Repository, refname: cstring): cint
+   {.cdecl, importc: "git_repository_set_head", dynlib: libgit.}
+
 proc reference_name_to_id*(`out`: ptr Oid, repository: ptr Repository, name: cstring): cint
    {.cdecl, importc: "git_reference_name_to_id", dynlib: libgit.}
+
+proc reference_name*(reference: ptr Reference): cstring
+   {.cdecl, importc: "git_reference_name", dynlib: libgit.}
+
+proc reference_is_remote*(reference: ptr Reference): cint
+   {.cdecl, importc: "git_reference_is_remote", dynlib: libgit.}
+
+proc reference_dwim*(`out`: ptr ptr Reference, repository: ptr Repository, shorthand: cstring): cint
+   {.cdecl, importc: "git_reference_dwim", dynlib: libgit.}
+
+proc revparse_single*(`out`: ptr ptr Object, repository: ptr Repository, spec: cstring): cint
+   {.cdecl, importc: "git_revparse_single", dynlib: libgit.}
+
+proc branch_create_from_annotated*(`out`: ptr ptr Reference, repository: ptr Repository,
+                                   branch_name: cstring,  annotated_commit: ptr AnnotatedCommit,
+                                   force: cint): cuint
+   {.cdecl, importc: "git_branch_create_from_annotated", dynlib: libgit.}
 
 # FIXME: Wrap into stringify
 proc oid_tostr_s*(oid: ptr Oid): cstring
@@ -272,8 +316,18 @@ proc oid_tostr_s*(oid: ptr Oid): cstring
 proc oid_cpy*(`out`, src: ptr Oid)
    {.cdecl, importc: "git_oid_cpy", dynlib: libgit.}
 
+proc annotated_commit_from_ref*(`out`: ptr ptr AnnotatedCommit, repository: ptr Repository, reference: ptr Reference): cint
+   {.cdecl, importc: "git_annotated_commit_from_ref", dynlib: libgit.}
+
 proc annotated_commit_lookup*(`out`: ptr ptr AnnotatedCommit, repository: ptr Repository, id: ptr Oid): cint
    {.cdecl, importc: "git_annotated_commit_lookup", dynlib: libgit.}
+
+proc annotated_commit_id*(commit: ptr AnnotatedCommit): ptr Oid
+   {.cdecl, importc: "git_annotated_commit_id", dynlib: libgit.}
+
+# Not available in v0.28
+# proc annotated_commit_ref*(commit: ptr AnnotatedCommit): cstring
+#    {.cdecl, importc: "git_annotated_commit_ref", dynlib: libgit.}
 
 proc merge_analysis*(analysis_out: ptr cuint, preference_out: ptr MergePreference,
                      repository: ptr Repository, their_heads: ptr ptr AnnotatedCommit,
@@ -302,8 +356,14 @@ proc repository_head*(`out`: ptr ptr Reference, repository: ptr Repository): cin
 proc object_lookup*(`object`: ptr ptr Object, repository: ptr Repository, id: ptr Oid, `type`: ObjectType): cint
    {.cdecl, importc: "git_object_lookup", dynlib: libgit.}
 
+proc object_id*(`object`: ptr Object): ptr Oid
+   {.cdecl, importc: "git_object_id", dynlib: libgit.}
+
 proc checkout_tree*(repository: ptr Repository, treeish: ptr Object, opts: ptr CheckoutOptions): cint
    {.cdecl, importc: "git_checkout_tree", dynlib: libgit.}
+
+proc reference_lookup*(`out`: ptr ptr Reference, repository: ptr Repository, name: cstring): cint
+   {.cdecl, importc: "git_reference_lookup", dynlib: libgit.}
 
 proc reference_set_target*(`out`: ptr ptr Reference, reference: ptr Reference, id: ptr Oid, log_message: cstring): cint
    {.cdecl, importc: "git_reference_set_target", dynlib: libgit.}
