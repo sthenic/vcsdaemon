@@ -306,8 +306,11 @@ proc revparse_single*(`out`: ptr ptr Object, repository: ptr Repository, spec: c
 
 proc branch_create_from_annotated*(`out`: ptr ptr Reference, repository: ptr Repository,
                                    branch_name: cstring,  annotated_commit: ptr AnnotatedCommit,
-                                   force: cint): cuint
+                                   force: cint): cint
    {.cdecl, importc: "git_branch_create_from_annotated", dynlib: libgit.}
+
+proc branch_set_upstream*(branch: ptr Reference, upstream_name: cstring): cint
+   {.cdecl, importc: "git_branch_set_upstream", dynlib: libgit.}
 
 # FIXME: Wrap into stringify
 proc oid_tostr_s*(oid: ptr Oid): cstring
@@ -342,6 +345,9 @@ proc revwalk_sorting*(walk: ptr Revwalk, sort_mode: cuint)
 
 proc revwalk_push*(walk: ptr Revwalk, id: ptr Oid): cint
    {.cdecl, importc: "git_revwalk_push", dynlib: libgit.}
+
+proc revwalk_push_range*(walk: ptr Revwalk, r: cstring): cint
+   {.cdecl, importc: "git_revwalk_push_range", dynlib: libgit.}
 
 proc revwalk_hide*(walk: ptr Revwalk, commit_id: ptr Oid): cint
    {.cdecl, importc: "git_revwalk_hide", dynlib: libgit.}

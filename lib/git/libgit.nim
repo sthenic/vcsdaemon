@@ -89,44 +89,7 @@ proc find_fetch_head(ref_name, remote_url: cstring, oid: ptr Oid, is_merge: cuin
    return 0
 
 
-proc guess_refish(o: GitRepository, refish: string): ptr AnnotatedCommit =
-   # FIXME: Allow other remotes
-   # FIXME: Have to return the reference since we don't have a way back from
-   #        annotated commit -> reference in v0.28.
-   var reference: ptr Reference
-   let target = "refs/remotes/origin/" & refish
-   check_libgit(reference_lookup(addr(reference), o.repository, cstring(target)))
-   defer:
-      reference_free(reference)
-
-   # FIXME: Do we really need an annotated commit?
-   # var annotated_commit: ptr AnnotatedCommit
-   check_libgit(annotated_commit_from_ref(addr(result), o.repository, reference))
-   # Caller has to free.
-   # defer:
-   #    annotated_commit_free(annotated_commit)
-
-
-proc resolve_refish(o: GitRepository, refish: string): ptr AnnotatedCommit =
-   # Caller has to free.
-   # FIXME: Have to return the reference since we don't have a way back from
-   #        annotated commit -> reference in v0.28.
-   var reference: ptr Reference
-   if reference_dwim(addr(reference), o.repository, refish) == 0:
-      defer:
-         reference_free(reference)
-      check_libgit(annotated_commit_from_ref(addr(result), o.repository, reference))
-      return
-
-   var obj: ptr Object
-   if revparse_single(addr(obj), o.repository, refish) == 0:
-      defer:
-         object_free(obj)
-      check_libgit(annotated_commit_lookup(addr(result), o.repository, object_id(obj)))
-      return
-
-
-proc checkout*(o: GitRepository, branch: string) =
+proc checkout*(o: GitRepository, branch: string): bool =
    if is_nil(o.repository):
       raise new_git_error("This Git session is not open.")
 
@@ -137,7 +100,13 @@ proc checkout*(o: GitRepository, branch: string) =
 
    # FIXME: check like guess_refish does
    if is_nil(annotated_commit):
-      raise new_git_error("Is nil!")
+      echo "Guessing remote"
+      let remote_guess = "refs/remotes/origin/" & branch
+      check_libgit(reference_lookup(addr(reference), o.repository, cstring(remote_guess))) # FIXME: Leaking
+      check_libgit(annotated_commit_from_ref(addr(annotated_commit), o.repository, reference))
+
+      if is_nil(annotated_commit):
+         raise new_git_error("Is nil!")
 
    defer:
       reference_free(reference)
@@ -159,16 +128,51 @@ proc checkout*(o: GitRepository, branch: string) =
    var target_head: cstring
    if reference_is_remote(reference) == 1:
       # FIXME: create branch from annotated, set target_head to git_reference_name(branch...)
-      raise new_git_error("Not implemented")
+      var branch_reference: ptr Reference
+      check_libgit(branch_create_from_annotated(addr(branch_reference), o.repository, branch, annotated_commit, 0.cint))
+      let upstream_name = "origin/" & branch
+      check_libgit(branch_set_upstream(branch_reference, cstring(upstream_name)))
+      target_head = reference_name(branch_reference)
+      reference_free(branch_reference)
+      result = true
    else:
       target_head = reference_name(reference)
+      result = false
 
    echo format("Target head: '$1'", target_head)
 
    check_libgit(repository_set_head(o.repository, target_head))
 
 
-proc merge_analysis*(o: GitRepository, branch: string) =
+proc fastforward*(o: GitRepository) =
+   if is_nil(o.repository):
+      raise new_git_error("This Git session is not open.")
+   ## Fast-forward the currently checked out branch to the current FETCH_HEAD.
+   var head_reference: ptr Reference
+   check_libgit(repository_head(addr(head_reference), o.repository))
+   defer:
+      reference_free(head_reference)
+
+   var fetch_head_oid: Oid
+   check_libgit(repository_fetchhead_foreach(o.repository, find_fetch_head, addr(fetch_head_oid)))
+
+   var fetch_head_obj: ptr Object
+   check_libgit(object_lookup(addr(fetch_head_obj), o.repository, addr(fetch_head_oid), ObjectType.COMMIT))
+   defer:
+      object_free(fetch_head_obj)
+
+   var checkout_options: CheckoutOptions
+   checkout_options.version = 1
+   checkout_options.checkout_strategy = CHECKOUT_FORCE # FIXME: Set to safe
+
+   check_libgit(checkout_tree(o.repository, fetch_head_obj, addr(checkout_options)))
+
+   var new_head_reference: ptr Reference
+   check_libgit(reference_set_target(addr(new_head_reference), head_reference, addr(fetch_head_oid), nil))
+   reference_free(new_head_reference)
+
+
+proc merge_analysis*(o: GitRepository, branch: string): bool =
    if is_nil(o.repository):
       raise new_git_error("This Git session is not open.")
 
@@ -189,18 +193,14 @@ proc merge_analysis*(o: GitRepository, branch: string) =
 
    # FIXME: Figure out what this function returns.
    if (merge_analysis and MERGE_ANALYSIS_FASTFORWARD) > 0:
-      echo "Fast forward possible"
+      result = true
    elif (merge_analysis and MERGE_ANALYSIS_UP_TO_DATE) > 0:
-      echo "Up to date"
+      result = false
 
 
-iterator walk_new_commits*(o: GitRepository, branch: string): GitLogObject =
+iterator walk_new_commits*(o: GitRepository, branch: string, full: bool = false): GitLogObject =
    if is_nil(o.repository):
       raise new_git_error("This Git session is not open.")
-
-   # FIXME: Checkout the target branch, then fetch to update FETCH_HEAD
-   checkout(o, branch)
-   fetch(o, "origin")
 
    var head: Oid
    check_libgit(reference_name_to_id(addr(head), o.repository, "HEAD"))
@@ -215,7 +215,8 @@ iterator walk_new_commits*(o: GitRepository, branch: string): GitLogObject =
 
    revwalk_sorting(walk, SORT_REVERSE)
    check_libgit(revwalk_push(walk, addr(fetch_head)))
-   check_libgit(revwalk_hide(walk, addr(head)))
+   if not full:
+      check_libgit(revwalk_hide(walk, addr(head)))
 
    var oid: Oid
    while revwalk_next(addr(oid), walk) == 0:
@@ -232,5 +233,29 @@ iterator walk_new_commits*(o: GitRepository, branch: string): GitLogObject =
       yield log
 
 
-proc fast_forward*(o: GitRepository) =
-   discard
+iterator walk_commits*(o: GitRepository, start, stop: string): GitLogObject =
+   if is_nil(o.repository):
+      raise new_git_error("This Git session is not open.")
+
+   var walk: ptr Revwalk
+   check_libgit(revwalk_new(addr(walk), o.repository))
+   defer:
+      revwalk_free(walk)
+
+   revwalk_sorting(walk, SORT_REVERSE)
+   check_libgit(revwalk_push_range(walk, cstring(start & ".." & stop)))
+
+   var oid: Oid
+   while revwalk_next(addr(oid), walk) == 0:
+      var commit: ptr Commit
+      check_libgit(commit_lookup(addr(commit), o.repository, addr(oid)))
+      let signature: ptr Signature = commit_author(commit)
+      var log = GitLogObject()
+      log.message = $commit_message(commit)
+      log.hash = $oid_tostr_s(addr(oid))
+      log.name = $signature[].name
+      log.email = $signature[].email
+      log.timestamp = signature.time.time
+      commit_free(commit)
+      yield log
+
