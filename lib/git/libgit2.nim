@@ -10,6 +10,30 @@ const
    SORT_TIME* = (1 shl 1).cuint
    SORT_REVERSE* = (1 shl 2).cuint
 
+const
+   CHECKOUT_NONE* = 0
+   CHECKOUT_SAFE* = (1 shl 0).cuint
+   CHECKOUT_FORCE* = (1 shl 1).cuint
+   CHECKOUT_RECREATE_MISSING* = (1 shl 2).cuint
+   CHECKOUT_ALLOW_CONFLICTS* = (1 shl 3).cuint
+   CHECKOUT_REMOVE_UNTRACKED* = (1 shl 4).cuint
+   CHECKOUT_REMOVE_IGNORED* = (1 shl 5).cuint
+   CHECKOUT_UPDATE_ONLY* = (1 shl 6).cuint
+   CHECKOUT_DONT_UPDATE_INDEX* = (1 shl 7).cuint
+   CHECKOUT_NO_REFRESH* = (1 shl 8).cuint
+   CHECKOUT_SKIP_UNMERGED* = (1 shl 9).cuint
+   CHECKOUT_USE_OURS* = (1 shl 10).cuint
+   CHECKOUT_USE_THEIRS* = (1 shl 11).cuint
+   CHECKOUT_DISABLE_PATHSPEC_MATCH* = (1 shl 12).cuint
+   CHECKOUT_SKIP_LOCKED_DIRECTORIES* = (1 shl 13).cuint
+   CHECKOUT_DONT_OVERWRITE_IGNORED* = (1 shl 14).cuint
+   CHECKOUT_CONFLICT_STYLE_MERGE* = (1 shl 15).cuint
+   CHECKOUT_CONFLICT_STYLE_DIFF3* = (1 shl 16).cuint
+   CHECKOUT_DONT_REMOVE_EXISTING* = (1 shl 17).cuint
+   CHECKOUT_DONT_WRITE_INDEX* = (1 shl 18).cuint
+   CHECKOUT_UPDATE_SUBMODULES* = (1 shl 19).cuint
+   CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED* = (1 shl 20).cuint
+
 type
    PGitRepository* = ptr object
    PGitRemote* = ptr object
@@ -154,11 +178,81 @@ type
       message*: cstring
       klass*: cint
 
+   GitCheckoutOptions* {.bycopy.} = object
+      version*: cuint
+      checkout_strategy*: cuint
+      disable_filters*: cint
+      dir_mode*: cuint
+      file_mode*: cuint
+      file_open_flags*: cint
+      notify_flags*: cuint
+      notify_cb*: pointer
+      notify_payload*: pointer
+      progress_cb*: pointer
+      progress_payload*: pointer
+      paths*: GitStrArray
+      baseline*: pointer
+      baseline_index*: pointer
+      target_directory*: cstring
+      ancestor_label*: cstring
+      our_label*: cstring
+      their_label*: cstring
+      perfdata_cb*: pointer
+      perfdata_payload*: pointer
+
+   GitCloneLocal* {.pure.} = enum
+      LocalAuto = 0
+      Local = 1
+      NoLocal = 2
+      LocalNoLinks = 3
+
+   GitCloneOptions* {.bycopy.} = object
+      version*: cuint
+      checkout_opts*: GitCheckoutOptions
+      fetch_opts*: GitFetchOptions
+      bare*: cint
+      local*: GitCloneLocal
+      checkout_branch*: cstring
+      repository_cb*: pointer
+      repository_cb_payload*: pointer
+      remote_cb*: pointer
+      remote_cb_payload*: pointer
+
+proc init*(o: var GitRemoteCallbacks) =
+   o = GitRemoteCallbacks()
+   o.version = 1
+
+proc init*(o: var GitProxyOptions) =
+   o = GitProxyOptions()
+   o.version = 1
+
+proc init*(o: var GitFetchOptions) =
+   o = GitFetchOptions()
+   init(o.callbacks)
+   init(o.proxy_opts)
+   o.version = 1
+   o.prune = GitFetchPrune.UNSPECIFIED
+   o.download_tags = GitRemoteAutotagOption.DOWNLOAD_TAGS_UNSPECIFIED
+
+proc init*(o: var GitCheckoutOptions) =
+   o = GitCheckoutOptions()
+   o.version = 1
+
+proc init*(o: var GitCloneOptions) =
+   o = GitCloneOptions()
+   init(o.checkout_opts)
+   init(o.fetch_opts)
+   o.version = 1
+   o.checkout_opts.checkout_strategy = CHECKOUT_SAFE
+
 proc init*(): cint {.cdecl, importc: "git_libgit2_init", dynlib: libgit.}
 
 proc shutdown*(): cint {.cdecl, importc: "git_libgit2_shutdown", dynlib: libgit.}
 
 proc error_last*(): ptr GitError {.cdecl, importc: "giterr_last", dynlib: libgit.}
+
+proc clone*(`out`: ptr PGitRepository, url, path: cstring, options: ptr GitCloneOptions): cint
+   {.cdecl, importc: "git_clone", dynlib: libgit.}
 
 proc repository_open*(`out`: ptr PGitRepository, path: cstring): cint
    {.cdecl, importc: "git_repository_open", dynlib: libgit.}

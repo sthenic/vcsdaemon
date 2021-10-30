@@ -1,4 +1,5 @@
 import strutils
+import os
 
 import ./libgit2
 
@@ -26,13 +27,21 @@ proc check_libgit(r: cint) =
       raise new_git_error("Git error ($1) '$2'.", r, message)
 
 
-proc open*(o: var GitObject, url: string) =
+proc open*(o: var GitObject, url: string, path: string) =
    if len(url) == 0:
       raise new_git_error("No URL specified.")
    if not is_nil(o.repository):
       raise new_git_error("This Git session is already open.")
 
-   check_libgit(repository_open(addr(o.repository), url))
+   # If the path exists, we try to open the Git repository contained within.
+   # Otherwise, we assume that we need to clone a new repository from the
+   # provided url.
+   if os.dir_exists(path):
+      check_libgit(repository_open(addr(o.repository), path))
+   else:
+      var options: GitCloneOptions
+      init(options)
+      check_libgit(clone(addr(o.repository), url, path, addr(options)))
 
 
 proc close*(o: var GitObject) =
@@ -68,13 +77,7 @@ proc fetch*(o: GitObject, remote: string) =
       remote_free(lremote)
 
    var fetch_options: GitFetchOptions
-   fetch_options.version = 1
-   fetch_options.callbacks.version = 1
-   fetch_options.prune = GitFetchPrune.UNSPECIFIED
-   fetch_options.update_fetchhead = 1
-   fetch_options.download_tags = GitRemoteAutotagOption.DOWNLOAD_TAGS_UNSPECIFIED
-   fetch_options.proxy_opts.version = 1
-   fetch_options.custom_headers = GitStrArray()
+   init(fetch_options)
    check_libgit(remote_fetch(lremote, nil, addr(fetch_options), "fetch"))
 
 

@@ -1,4 +1,7 @@
 import strutils
+import uri
+import os
+import md5
 
 import ./alasso
 import ./utils/log
@@ -23,10 +26,11 @@ type
          svn_object*: SvnObject
       of TrackerKind.Git:
          git_object*: GitObject
+         path*: string
 
 
 const UPDATE_BATCH_SIZE = 30
-
+const ENV_GIT_REPOSITORY_STORE = "SVNDAEMON_GIT_REPOSITORY_STORE"
 
 proc abort(t: typedesc[TrackerFatalError], id: int, msg: string, args: varargs[string, `$`]) =
    log.error(msg, args)
@@ -36,10 +40,6 @@ proc abort(t: typedesc[TrackerFatalError], id: int, msg: string, args: varargs[s
 
 
 proc destroy*(t: var Tracker) =
-   if t.repository.id > 0:
-      log.info("Removing tracker for repository:\n" &
-               "URL: " & t.repository.url & "\n" &
-               "Branch: " & t.repository.branch)
    case t.kind
    of TrackerKind.Svn:
       if not is_nil(t.svn_object):
@@ -48,10 +48,26 @@ proc destroy*(t: var Tracker) =
       if not is_nil(t.git_object):
          destroy(t.git_object)
 
+   if t.repository.id > 0:
+      log.info("Removed tracker for SVN repository:\n" &
+               "URL: " & t.repository.url & "\n" &
+               "Branch: " & t.repository.branch)
+
 
 proc destroy*(trackers: var openarray[Tracker]) =
    for t in mitems(trackers):
       destroy(t)
+
+
+proc git_repository_path_from_url(url: string): string =
+   let uri = parse_uri(url)
+   var (_, path) = split_path(uri.path)
+   remove_suffix(path, ".git")
+   let root = if exists_env(ENV_GIT_REPOSITORY_STORE):
+      normalized_path(get_env(ENV_GIT_REPOSITORY_STORE)) & "/"
+   else:
+      "./repos/"
+   result = absolute_path(root & path & "-" & $to_md5(url))
 
 
 proc open*(t: var Tracker, r: Repository) =
@@ -61,11 +77,19 @@ proc open*(t: var Tracker, r: Repository) =
       t.svn_object = new SvnObject
       libsvn.init(t.svn_object)
       libsvn.open_session(t.svn_object, r.url)
+      log.info("Created tracker for SVN repository:\n" &
+               "URL: $1\n" &
+               "Branch: $2\n", r.url, r.branch)
    of "git":
       t = Tracker(kind: TrackerKind.Git)
       t.git_object = new GitObject
+      t.path = git_repository_path_from_url(r.url)
       libgit.init(t.git_object)
-      libgit.open(t.git_object, r.url)
+      libgit.open(t.git_object, r.url, t.path)
+      log.info("Created tracker for Git repository:\n" &
+               "URL: $1\n" &
+               "Branch: $2\n" &
+               "Local path: $3\n", r.url, r.branch, t.path)
    else:
       log.abort(TrackerError, "Cannot create tracker for unsupported VCS type '$1'.", r.vcs)
 
@@ -145,8 +169,6 @@ proc update_svn(t: Tracker, id: int, alasso_url, latest_uid: string, latest_id: 
 
 
 proc update_git(t: Tracker, alasso_url, latest_uid: string, latest_id: int) =
-   # FIXME: We have to figure out the cloning operation for a new remote.
-
    # We begin by fetching from the remote. Next, we walk the commits in one of
    # two ways, either
    #   1. the Alasso repository does not contain a commit object, so we walk and
@@ -246,9 +268,6 @@ proc create*(trackers: var seq[Tracker], alasso_url: string) =
       try:
          open(t, r)
          add(trackers, t)
-         log.info("Adding tracker for repository:\n" &
-                  "URL: " & r.url & "\n" &
-                  "Branch: " & r.branch)
       except SvnError as e:
          destroy(t)
          log.warning("Cannot establish a connection to the SVN server at '$1', skipping. ($2)",
