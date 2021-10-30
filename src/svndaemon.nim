@@ -93,7 +93,7 @@ tspec.it_value = Timespec(tv_sec: posix.Time(10), tv_nsec: 0)
 log.info("Svndaemon started $1.", utc(times.now()))
 
 # Main program loop.
-var trackers: seq[RepositoryTracker]
+var trackers: seq[Tracker]
 var ecode = ESUCCESS
 while not do_exit:
    try:

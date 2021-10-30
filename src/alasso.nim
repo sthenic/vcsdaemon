@@ -95,11 +95,14 @@ proc get_repositories*(url: string): seq[Repository] =
    let node = json.parse_json(str)
    for repository_json in items(node["data"]):
       let repository = parse_repository(repository_json)
-      if repository.vcs == "subversion":
+      case repository.vcs
+      of "subversion", "git":
          add(result, repository)
+      else:
+         discard
 
 
-proc get_latest_commit*(repository: int, url: string): tuple[revnum, parent: int] =
+proc get_latest_commit*(repository: int, url: string): tuple[uid: string, id: int] =
    let curl = libcurl.easy_init()
    defer:
       curl.easy_cleanup()
@@ -120,10 +123,10 @@ proc get_latest_commit*(repository: int, url: string): tuple[revnum, parent: int
 
    let node = json.parse_json(str)
    if node["data"].kind == JNull:
-      result = (0, 0)
+      result = ("", 0)
    else:
       result = (
-         parse_int(get_str(node["data"]["attributes"]["uid"])[1..^1]),
+         get_str(node["data"]["attributes"]["uid"]),
          parse_int(get_str(node["data"]["id"]))
       )
 
