@@ -66,11 +66,22 @@ proc close*(o: var GitObject) =
 
 
 proc init*(o: var GitObject) =
+   ## Initialize the Git object ``o``. The caller is expected to call ``destroy``
+   ## if an exception is raised.
    if o.is_initialized:
       raise new_git_error("Git object is already initialized.")
 
-   check_libgit(libgit2.init())
+   # There's an API incompatiblity between libgit2 v0.28 and any later version.
+   # In particular, the git_cred* functions have been renamed to git_credential.
+   discard libgit2.init()
+
    o.is_initialized = true
+   var major, minor, rev: cint
+   libgit2.version(addr(major), addr(minor), addr(rev))
+   if (major != 0) or (minor > 28):
+      raise new_git_error("This software is only compatible with libgit2 up to v0.28 " &
+                          "but the linked version of libgit2 is v$1.$2.$3.", major, minor, rev)
+
 
 
 proc destroy*(o: var GitObject) =

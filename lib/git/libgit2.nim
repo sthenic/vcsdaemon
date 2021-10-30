@@ -251,6 +251,9 @@ proc shutdown*(): cint {.cdecl, importc: "git_libgit2_shutdown", dynlib: libgit.
 
 proc error_last*(): ptr GitError {.cdecl, importc: "giterr_last", dynlib: libgit.}
 
+proc version*(major, minor, rev: ptr cint)
+   {.cdecl, importc: "git_libgit2_version", dynlib: libgit.}
+
 proc credential_ssh_key_from_agent*(`out`: ptr ptr GitCred, username: cstring): cint
    {.cdecl, importc: "git_cred_ssh_key_from_agent", dynlib: libgit.}
 
