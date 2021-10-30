@@ -53,14 +53,6 @@ type
    GitOid* {.bycopy.} = object
       id: array[OID_RAWSZ, uint8]
 
-   GitTransportMessageCb* =
-      proc (str: cstring, len: cint, payload: pointer): cint {.cdecl.}
-
-   GitRemoteCompletionType* {.pure.} = enum
-      REMOTE_COMPLETION_DOWNLOAD = 0
-      REMOTE_COMPLETION_INDEXING = 1
-      REMOTE_COMPLETION_ERROR = 2
-
    GitCred* {.bycopy.} = object
       credtype*: cuint
       free*: proc (cred: ptr GitCred) {.cdecl.}
@@ -69,85 +61,43 @@ type
       proc (cred: ptr ptr GitCred, url, username_from_url: cstring, allowed_types: cuint,
             payload: pointer): cint {.cdecl.}
 
-   GitCertType* {.pure.} = enum
-      NONE = 0
-      X509 = 1
-      HOSTKEY_LIBSSH2 = 2
-      STRARRAY = 3
-
-   GitCert* {.bycopy.} = object
-      cert_type*: GitCertType
-
-   GitTransportCertificateCheckCb* =
-      proc (GitCert: ptr GitCert, valid: cint, host: cstring, payload: pointer): cint {.cdecl.}
-
-   GitTransferProgress* {.bycopy.} = object
-      total_objects*: cuint
-      indexed_objects*: cuint
-      received_objects*: cuint
-      local_objects*: cuint
-      total_deltas*: cuint
-      indexed_deltas*: cuint
-      received_bytes*: csize_t
-
-   GitTransferProgressCb* =
-      proc (stats: ptr GitTransferProgress, payload: pointer): cint {.cdecl.}
-
-   GitPackbuilderProgress* =
-      proc (stage: cint, current: uint32, total: uint32, payload: pointer): cint {.cdecl.}
-
-   GitPushTransferProgress* =
-      proc (current: cuint, total: cuint, bytes: csize_t, payload: pointer): cint {.cdecl.}
-
-   GitPushUpdate* {.bycopy.} = object
-      src_refname*: cstring
-      dst_refname*: cstring
-      src*: GitOid
-      dst*: GitOid
-
-   GitPushNegotiation* =
-      proc (updates: ptr ptr GitPushUpdate, len: csize_t, payload: pointer): cint {.cdecl.}
-
-   GitTransportCb* =
-      proc (`out`: ptr PGitTransport, owner: PGitRemote, param: pointer): cint {.cdecl.}
-
    GitRemoteCallbacks* {.bycopy.} = object
       version*: cuint
-      sideband_progress*: GitTransportMessageCb
-      completion*: proc (`type`: GitRemoteCompletionType, data: pointer): cint {.cdecl.}
+      sideband_progress*: pointer
+      completion*: pointer
       credentials*: GitCredAcquireCb
-      certificate_check*: GitTransportCertificateCheckCb
-      transfer_progress*: GitTransferProgressCb
-      update_tips*: proc (refname: cstring, a: ptr GitOid, b: ptr GitOid, data: pointer): cint {.cdecl.}
-      pack_progress*: GitPackbuilderProgress
-      push_transfer_progress*: GitPushTransferProgress
-      push_update_reference*: proc (refname: cstring, status: cstring, data: pointer): cint {.cdecl.}
-      push_negotiation*: GitPushNegotiation
-      transport*: GitTransportCb
+      certificate_check*: pointer
+      transfer_progress*: pointer
+      update_tips*: pointer
+      pack_progress*: pointer
+      push_transfer_progress*: pointer
+      push_update_reference*: pointer
+      push_negotiation*: pointer
+      transport*: pointer
       payload*: pointer
 
    GitFetchPrune* {.pure.} = enum
-      UNSPECIFIED = 0
-      PRUNE = 1
-      NO_PRUNE = 2
+      Unspecified = 0
+      Prune = 1
+      NoPrune = 2
 
    GitRemoteAutotagOption* {.pure.} = enum
-      DOWNLOAD_TAGS_UNSPECIFIED = 0
-      DOWNLOAD_TAGS_AUTO = 1
-      DOWNLOAD_TAGS_NONE = 2
-      DOWNLOAD_TAGS_ALL = 3
+      DownloadTagsUnspecified = 0
+      DownloadTagsAuto = 1
+      DownloadTagsNone = 2
+      DownloadTagsAll = 3
 
    GitProxy* {.pure.} = enum
-      NONE = 0
-      AUTO = 1
-      SPECIFIED = 2
+      None = 0
+      Auto = 1
+      Specified = 2
 
    GitProxyOptions* {.bycopy.} = object
       version*: cuint
       `type`*: GitProxy
       url*: cstring
       credentials*: GitCredAcquireCb
-      certificate_check*: GitTransportCertificateCheckCb
+      certificate_check*: pointer
       payload*: pointer
 
    GitStrArray* {.bycopy.} = object
@@ -232,7 +182,7 @@ proc init*(o: var GitFetchOptions) =
    init(o.proxy_opts)
    o.version = 1
    o.prune = GitFetchPrune.UNSPECIFIED
-   o.download_tags = GitRemoteAutotagOption.DOWNLOAD_TAGS_UNSPECIFIED
+   o.download_tags = GitRemoteAutotagOption.DownloadTagsUnspecified
 
 proc init*(o: var GitCheckoutOptions) =
    o = GitCheckoutOptions()
