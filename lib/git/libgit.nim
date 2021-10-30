@@ -23,8 +23,22 @@ proc new_git_error(msg: string, args: varargs[string, `$`]): ref GitError =
 
 proc check_libgit(r: cint) =
    if r < 0:
-      let message = $libgit2.error_last()[].message
+      let error = libgit2.error_last()
+      let message = if not is_nil(error):
+         $error[].message
+      else:
+         "<NO MESSAGE>"
       raise new_git_error("Git error ($1) '$2'.", r, message)
+
+
+proc acquire_credentials(cred: ptr ptr GitCred, url, username_from_url: cstring,
+                         allowed_types: cuint, payload: pointer): cint {.cdecl.} =
+   # We only support SSH-based authentication.
+   if len(username_from_url) > 0 and (allowed_types and CREDENTIAL_SSH_KEY) > 0:
+      result = credential_ssh_key_from_agent(cred, username_from_url)
+   else:
+      raise new_git_error("Authentication required but either the URL does not contain " &
+                           "a username or SSH based authentication is not allowed.")
 
 
 proc open*(o: var GitObject, url: string, path: string) =
@@ -41,6 +55,7 @@ proc open*(o: var GitObject, url: string, path: string) =
    else:
       var options: GitCloneOptions
       init(options)
+      options.fetch_opts.callbacks.credentials = acquire_credentials
       check_libgit(clone(addr(o.repository), url, path, addr(options)))
 
 
@@ -78,6 +93,7 @@ proc fetch*(o: GitObject, remote: string) =
 
    var fetch_options: GitFetchOptions
    init(fetch_options)
+   fetch_options.callbacks.credentials = acquire_credentials
    check_libgit(remote_fetch(lremote, nil, addr(fetch_options), "fetch"))
 
 

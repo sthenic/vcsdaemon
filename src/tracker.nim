@@ -79,7 +79,7 @@ proc open*(t: var Tracker, r: Repository) =
       libsvn.open_session(t.svn_object, r.url)
       log.info("Created tracker for SVN repository:\n" &
                "URL: $1\n" &
-               "Branch: $2\n", r.url, r.branch)
+               "Branch: $2", r.url, r.branch)
    of "git":
       t = Tracker(kind: TrackerKind.Git)
       t.git_object = new GitObject
@@ -89,7 +89,7 @@ proc open*(t: var Tracker, r: Repository) =
       log.info("Created tracker for Git repository:\n" &
                "URL: $1\n" &
                "Branch: $2\n" &
-               "Local path: $3\n", r.url, r.branch, t.path)
+               "Local path: $3", r.url, r.branch, t.path)
    else:
       log.abort(TrackerError, "Cannot create tracker for unsupported VCS type '$1'.", r.vcs)
 
@@ -256,7 +256,7 @@ proc create*(trackers: var seq[Tracker], alasso_url: string) =
             already_tracked = true
             break
 
-      if remove_tracker_index > 0:
+      if remove_tracker_index >= 0:
          destroy(trackers[remove_tracker_index])
          del(trackers, remove_tracker_index)
          continue

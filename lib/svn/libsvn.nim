@@ -78,8 +78,7 @@ proc open_session*(o: var SvnObject, url: string) =
       raise new_svn_error("An SVN session is already open.")
 
    # Initialize authentication providers.
-   var providers = array_make(o.pool, 1,
-                              cast[cint](sizeof(ptr SvnAuthProviderObject)))
+   var providers = array_make(o.pool, 1, cast[cint](sizeof(ptr SvnAuthProviderObject)))
    var provider: ptr SvnAuthProviderObject
 
    # Provider to get/set information from the user's ~/.subversion
