@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed project from 'svndaemon' to 'vcsdaemon'.
+
 ### Added
 
 - Add support for observing Git repositories.

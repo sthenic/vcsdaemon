@@ -1,20 +1,24 @@
 [![NIM](https://img.shields.io/badge/Nim-1.6.0-orange.svg?style=flat-square)](https://nim-lang.org)
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-# Svndaemon
+# vcsdaemon
 
-This application is a Linux daemon to track log entries of the SVN repositories listed in an [Alasso](https://github.com/sthenic/alasso) database. The goal is to maintain a reflection of the revision metadata from the target repositories in the Alasso database.
+This application is a Linux daemon to track log entries of the VCS repositories
+listed in an [Alasso](https://github.com/sthenic/alasso) database. The goal is
+to maintain a reflection of the revision metadata from the target repositories
+in the Alasso database. Currently, only **Git** and **Subversion** are
+supported.
 
 ## Docker
-The included [Dockerfile](./Dockerfile) can be used to run svndaemon.
+The included [Dockerfile](./Dockerfile) can be used to run vcsdaemon.
 
 Build the docker image with
 ```
-$ docker image build -t svndaemon .
+$ docker image build -t vcsdaemon .
 ```
 and then run the container with
 ```
-$ docker run --name svndaemon -it --rm --env ALASSO_URL=$ALASSO_URL -v $SVN_CRED_DIR:/root/.subversion svndaemon
+$ docker run --name vcsdaemon -it --rm --env ALASSO_URL=$ALASSO_URL -v $SVN_CRED_DIR:/root/.subversion vcsdaemon
 ```
 where
 * `ALASSO_URL`: The URL to the Alasso instance. E.g. `http://frontend-container/api` or `https://alasso.my-domain.com/api`

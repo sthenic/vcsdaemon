@@ -30,7 +30,7 @@ type
 
 
 const UPDATE_BATCH_SIZE = 30
-const ENV_GIT_REPOSITORY_STORE = "SVNDAEMON_GIT_REPOSITORY_STORE"
+const ENV_GIT_REPOSITORY_STORE = "VCSDAEMON_GIT_REPOSITORY_STORE"
 
 proc abort(t: typedesc[TrackerFatalError], id: int, msg: string, args: varargs[string, `$`]) =
    log.error(msg, args)

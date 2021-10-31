@@ -8,4 +8,4 @@ COPY config.nims /app
 COPY src /app/src/
 COPY lib /app/lib/
 RUN nimble build -d:release
-CMD ["sh", "-c", "/app/svndaemon --alasso-url=$ALASSO_URL --restart-on-error --restart-on-timeout"]
+CMD ["sh", "-c", "/app/vcsdaemon --alasso-url=$ALASSO_URL --restart-on-error --restart-on-timeout"]
