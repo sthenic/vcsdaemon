@@ -1,5 +1,5 @@
 FROM nimlang/nim:alpine
-RUN apk --no-cache add curl apr subversion-dev
+RUN apk --no-cache add curl apr subversion-dev libgit2-dev
 RUN mkdir -p /app/src && mkdir /app/lib
 WORKDIR /app
 RUN nimble install -y jester libcurl
