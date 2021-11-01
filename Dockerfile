@@ -4,7 +4,6 @@ RUN mkdir -p /app/src && mkdir /app/lib
 WORKDIR /app
 RUN nimble install -y jester libcurl
 COPY help.txt /app
-COPY config.nims /app
 COPY src /app/src/
 COPY lib /app/lib/
 RUN nimble build -d:release
