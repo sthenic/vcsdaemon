@@ -271,4 +271,4 @@ proc revwalk_push_range*(walk: PGitRevwalk, r: cstring): cint
 proc oid_tostr_s(oid: ptr GitOid): cstring
    {.cdecl, importc: "git_oid_tostr_s", dynlib: libgit.}
 
-proc `$`*(oid: GitOid): string = $oid_tostr_s(unsafeaddr(oid))
+proc `$`*(oid: GitOid): string = $oid_tostr_s(unsafe_addr(oid))

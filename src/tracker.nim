@@ -19,18 +19,18 @@ type
       Svn, Git
 
    Tracker* = object
-      repository*: Repository
+      repository: Repository
       is_open: bool
-      case kind*: TrackerKind
+      alasso_url: string
+      case kind: TrackerKind
       of TrackerKind.Svn:
-         svn_object*: SvnObject
+         svn_object: SvnObject
       of TrackerKind.Git:
-         git_object*: GitObject
-         path*: string
+         git_object: GitObject
 
 
 const UPDATE_BATCH_SIZE = 30
-const ENV_GIT_REPOSITORY_STORE = "VCSDAEMON_GIT_REPOSITORY_STORE"
+
 
 proc abort(t: typedesc[TrackerFatalError], id: int, msg: string, args: varargs[string, `$`]) =
    log.error(msg, args)
@@ -49,7 +49,7 @@ proc destroy*(t: var Tracker) =
          destroy(t.git_object)
 
    if t.repository.id > 0:
-      log.info("Removed tracker for SVN repository:\n" &
+      log.info("Removed tracker for repository:\n" &
                "URL: " & t.repository.url & "\n" &
                "Branch: " & t.repository.branch)
 
@@ -59,18 +59,15 @@ proc destroy*(trackers: var openarray[Tracker]) =
       destroy(t)
 
 
-proc git_repository_path_from_url(url: string): string =
+proc git_repository_path_from_url(url, repository_store: string): string =
    let uri = parse_uri(url)
    var (_, path) = split_path(uri.path)
    remove_suffix(path, ".git")
-   let root = if exists_env(ENV_GIT_REPOSITORY_STORE):
-      normalized_path(get_env(ENV_GIT_REPOSITORY_STORE)) & "/"
-   else:
-      "./repos/"
-   result = absolute_path(root & path & "-" & $to_md5(url))
+   result = repository_store & "/" & path & "-" & $to_md5(url)
 
 
-proc open*(t: var Tracker, r: Repository) =
+proc open(t: var Tracker, r: Repository, alasso_url, repository_store, ssh_public_key,
+          ssh_private_key, ssh_passphrase: string) =
    case r.vcs
    of "subversion":
       t = Tracker(kind: TrackerKind.Svn)
@@ -81,19 +78,20 @@ proc open*(t: var Tracker, r: Repository) =
                "URL: $1\n" &
                "Branch: $2", r.url, r.branch)
    of "git":
+      let path = git_repository_path_from_url(r.url, repository_store)
       t = Tracker(kind: TrackerKind.Git)
       t.git_object = new GitObject
-      t.path = git_repository_path_from_url(r.url)
       libgit.init(t.git_object)
-      libgit.open(t.git_object, r.url, t.path)
+      libgit.open(t.git_object, r.url, path, ssh_public_key, ssh_private_key, ssh_passphrase)
       log.info("Created tracker for Git repository:\n" &
                "URL: $1\n" &
                "Branch: $2\n" &
-               "Local path: $3", r.url, r.branch, t.path)
+               "Local path: $3", r.url, r.branch, path)
    else:
       log.abort(TrackerError, "Cannot create tracker for unsupported VCS type '$1'.", r.vcs)
 
    t.repository = r
+   t.alasso_url = alasso_url
    t.is_open = true
 
 
@@ -138,7 +136,7 @@ proc post_commit[T: SvnLogObject | GitLogObject](commit: T, repository, parent: 
                 alasso_url, e.msg)
 
 
-proc update_svn(t: Tracker, id: int, alasso_url, latest_uid: string, latest_id: int) =
+proc update_svn(t: Tracker, id: int, latest_uid: string, latest_id: int) =
    var server_latest_revnum: SvnRevnum
    try:
       server_latest_revnum = get_latest_log(t.svn_object, [t.repository.branch]).revision
@@ -156,7 +154,7 @@ proc update_svn(t: Tracker, id: int, alasso_url, latest_uid: string, latest_id: 
       while (first <= last):
          let commits_to_post = get_log(t.svn_object, first, last, [t.repository.branch])
          for commit in commits_to_post:
-            parent = post_commit(commit, t.repository.id, parent, alasso_url)
+            parent = post_commit(commit, t.repository.id, parent, t.alasso_url)
 
          # Output a trace log message after successfully posting a batch of
          # revisions.
@@ -168,7 +166,7 @@ proc update_svn(t: Tracker, id: int, alasso_url, latest_uid: string, latest_id: 
          last = min(first + UPDATE_BATCH_SIZE, server_latest_revnum)
 
 
-proc update_git(t: Tracker, alasso_url, latest_uid: string, latest_id: int) =
+proc update_git(t: Tracker, latest_uid: string, latest_id: int) =
    # We begin by fetching from the remote. Next, we walk the commits in one of
    # two ways, either
    #   1. the Alasso repository does not contain a commit object, so we walk and
@@ -186,11 +184,11 @@ proc update_git(t: Tracker, alasso_url, latest_uid: string, latest_id: int) =
       var parent = latest_id
       if len(latest_uid) == 0:
          for commit in walk_commits(t.git_object, "origin", t.repository.branch):
-            parent = post_commit(commit, t.repository.id, parent, alasso_url)
+            parent = post_commit(commit, t.repository.id, parent, t.alasso_url)
             inc(commits_posted)
       else:
          for commit in walk_commits_range(t.git_object, latest_uid, "origin/" & t.repository.branch):
-            parent = post_commit(commit, t.repository.id, parent, alasso_url)
+            parent = post_commit(commit, t.repository.id, parent, t.alasso_url)
             inc(commits_posted)
 
    except GitError as e:
@@ -202,35 +200,36 @@ proc update_git(t: Tracker, alasso_url, latest_uid: string, latest_id: int) =
                t.repository.branch, t.repository.id)
 
 
-proc update*(t: Tracker, id: int, alasso_url: string) =
+proc update*(t: Tracker, id: int) =
    if not t.is_open:
       log.abort(TrackerError, "Tracker is not active.")
 
    var latest_uid: string
    var latest_id: int
    try:
-      (latest_uid, latest_id) = get_latest_commit(t.repository.id, alasso_url)
+      (latest_uid, latest_id) = get_latest_commit(t.repository.id, t.alasso_url)
    except AlassoTimeoutError:
       log.abort(TrackerTimeoutError,
                 "Failed to get latest revision from Alasso database at '$1'. Operation timed out.",
-                alasso_url)
+                t.alasso_url)
    except AlassoError as e:
       log.abort(TrackerError, "Failed to get latest revision from Alasso database at '$1' ($2).",
-                alasso_url, e.msg)
+                t.alasso_url, e.msg)
 
    case t.kind
    of TrackerKind.Svn:
-      update_svn(t, id, alasso_url, latest_uid, latest_id)
+      update_svn(t, id, latest_uid, latest_id)
    of TrackerKind.Git:
-      update_git(t, alasso_url, latest_uid, latest_id)
+      update_git(t, latest_uid, latest_id)
 
 
-proc update*(trackers: openarray[Tracker], alasso_url: string) =
+proc update*(trackers: openarray[Tracker]) =
    for i, t in trackers:
-      update(t, i, alasso_url)
+      update(t, i)
 
 
-proc create*(trackers: var seq[Tracker], alasso_url: string) =
+proc create*(trackers: var seq[Tracker], alasso_url, repository_store, ssh_public_key,
+             ssh_private_key, ssh_passphrase: string) =
    ## Create trackers from repostories present in the Alasso database, add any
    ## untracked repositories to ``trackers``.
    var repositories: seq[Repository]
@@ -266,7 +265,7 @@ proc create*(trackers: var seq[Tracker], alasso_url: string) =
 
       var t: Tracker
       try:
-         open(t, r)
+         open(t, r, alasso_url, repository_store, ssh_public_key, ssh_private_key, ssh_passphrase)
          add(trackers, t)
       except SvnError as e:
          destroy(t)

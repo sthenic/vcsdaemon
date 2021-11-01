@@ -3,16 +3,28 @@ usage:
 
 
 options:
-  -h, --help            Print this help message and exit.
-  -v, --version         Print the version information and exit.
+  -h, --help               Print this help message and exit.
+  -v, --version            Print the version information and exit.
 
-  -d, --daemon          Start the application as a daemon process. When running
-                        as a daemon, log messages will be written to
-                        '/var/log/syslog' instead of to stdout.
+  -d, --daemon             Start the application as a daemon process. When
+                           running as a daemon, log messages will be written to
+                           '/var/log/syslog' instead of to stdout.
 
-  --alasso-url=URL      Specify the URL to the server hosting the Alasso
-                        database, e.g. 'http://localhost:5000'.
+  --alasso-url=URL         Specify the URL to the server hosting the Alasso
+                           database, e.g. 'http://localhost:5000'.
 
-  --restart-on-timeout  If specified, the application will not exit with an
-                        error if an operation times out, e.g. if the CURL
-                        request to Alasso takes too long to complete.
+  --ssh-public-key=PATH    Specify the path to the SSH public key. This is used
+                           to observe Git repositories over SSH.
+
+  --ssh-private-key=PATH   Specify the path to the SSH private key. This is used
+                           to observe Git repositories over SSH.
+
+  --ssh-passphrase=VAL     Specify the passphrase for the SSH key. Default is an
+                           empty string (no passphrase).
+
+  --repository-store=PATH  Specify the directory in which to store the observed
+                           Git repositories. The default value is './repos'.
+
+  --restart-on-timeout     If specified, the application will not exit with an
+                           error if an operation times out, e.g. if the CURL
+                           request to Alasso takes too long to complete.

@@ -9,6 +9,9 @@ type
    GitObject* = ref object
       repository: PGitRepository
       is_initialized: bool
+      ssh_public_key: string
+      ssh_private_key: string
+      ssh_passphrase: string
 
    GitLogObject* = object
       hash*: string
@@ -35,17 +38,29 @@ proc acquire_credentials(cred: ptr ptr GitCred, url, username_from_url: cstring,
                          allowed_types: cuint, payload: pointer): cint {.cdecl.} =
    # We only support SSH-based authentication.
    if len(username_from_url) > 0 and (allowed_types and CREDENTIAL_SSH_KEY) > 0:
-      result = credential_ssh_key_from_agent(cred, username_from_url)
+      if is_nil(payload):
+         raise new_git_error("Expected a reference to a Git object but got 'nil'.")
+
+      let ssh_public_key = cast[ptr GitObject](payload)[].ssh_public_key
+      let ssh_private_key = cast[ptr GitObject](payload)[].ssh_private_key
+      let ssh_passphrase = cast[ptr GitObject](payload)[].ssh_passphrase
+
+      result = credential_ssh_key_new(cred, username_from_url, cstring(ssh_public_key),
+                                      cstring(ssh_private_key), cstring(ssh_passphrase))
    else:
       raise new_git_error("Authentication required but either the URL does not contain " &
-                           "a username or SSH based authentication is not allowed.")
+                          "a username or SSH based authentication is not allowed.")
 
 
-proc open*(o: var GitObject, url: string, path: string) =
+proc open*(o: var GitObject, url, path, ssh_public_key, ssh_private_key, ssh_passphrase: string) =
    if len(url) == 0:
       raise new_git_error("No URL specified.")
    if not is_nil(o.repository):
       raise new_git_error("This Git session is already open.")
+
+   o.ssh_public_key = ssh_public_key
+   o.ssh_private_key = ssh_private_key
+   o.ssh_passphrase = ssh_passphrase
 
    # If the path exists, we try to open the Git repository contained within.
    # Otherwise, we assume that we need to clone a new repository from the
@@ -56,6 +71,7 @@ proc open*(o: var GitObject, url: string, path: string) =
       var options: GitCloneOptions
       init(options)
       options.fetch_opts.callbacks.credentials = acquire_credentials
+      options.fetch_opts.callbacks.payload = unsafe_addr(o)
       check_libgit(clone(addr(o.repository), url, path, addr(options)))
 
 
@@ -105,6 +121,7 @@ proc fetch*(o: GitObject, remote: string) =
    var fetch_options: GitFetchOptions
    init(fetch_options)
    fetch_options.callbacks.credentials = acquire_credentials
+   fetch_options.callbacks.payload = unsafe_addr(o)
    check_libgit(remote_fetch(lremote, nil, addr(fetch_options), "fetch"))
 
 
