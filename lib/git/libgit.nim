@@ -34,7 +34,7 @@ proc check_libgit(r: cint) =
       raise new_git_error("Git error ($1) '$2'.", r, message)
 
 
-proc acquire_credentials(cred: ptr ptr GitCred, url, username_from_url: cstring,
+proc acquire_credentials(cred: ptr ptr GitCredential, url, username_from_url: cstring,
                          allowed_types: cuint, payload: pointer): cint {.cdecl.} =
    # We only support SSH-based authentication.
    if len(username_from_url) > 0 and (allowed_types and CREDENTIAL_SSH_KEY) > 0:
@@ -94,8 +94,8 @@ proc init*(o: var GitObject) =
    o.is_initialized = true
    var major, minor, rev: cint
    libgit2.version(addr(major), addr(minor), addr(rev))
-   if (major != 0) or (minor > 28):
-      raise new_git_error("This software is only compatible with libgit2 up to v0.28 " &
+   if (major != 1):
+      raise new_git_error("This software is only compatible with libgit2 v1.0.0 or later " &
                           "but the linked version of libgit2 is v$1.$2.$3.", major, minor, rev)
 
 

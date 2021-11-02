@@ -53,19 +53,19 @@ type
    GitOid* {.bycopy.} = object
       id: array[OID_RAWSZ, uint8]
 
-   GitCred* {.bycopy.} = object
+   GitCredential* {.bycopy.} = object
       credtype*: cuint
-      free*: proc (cred: ptr GitCred) {.cdecl.}
+      free*: proc (cred: ptr GitCredential) {.cdecl.}
 
-   GitCredAcquireCb* =
-      proc (cred: ptr ptr GitCred, url, username_from_url: cstring, allowed_types: cuint,
+   GitCredentialAcquireCb* =
+      proc (cred: ptr ptr GitCredential, url, username_from_url: cstring, allowed_types: cuint,
             payload: pointer): cint {.cdecl.}
 
    GitRemoteCallbacks* {.bycopy.} = object
       version*: cuint
       sideband_progress*: pointer
       completion*: pointer
-      credentials*: GitCredAcquireCb
+      credentials*: GitCredentialAcquireCb
       certificate_check*: pointer
       transfer_progress*: pointer
       update_tips*: pointer
@@ -74,7 +74,9 @@ type
       push_update_reference*: pointer
       push_negotiation*: pointer
       transport*: pointer
+      remote_ready*: pointer
       payload*: pointer
+      resolve_url*: pointer
 
    GitFetchPrune* {.pure.} = enum
       Unspecified = 0
@@ -96,7 +98,7 @@ type
       version*: cuint
       `type`*: GitProxy
       url*: cstring
-      credentials*: GitCredAcquireCb
+      credentials*: GitCredentialAcquireCb
       certificate_check*: pointer
       payload*: pointer
 
@@ -204,17 +206,17 @@ proc error_last*(): ptr GitError {.cdecl, importc: "giterr_last", dynlib: libgit
 proc version*(major, minor, rev: ptr cint)
    {.cdecl, importc: "git_libgit2_version", dynlib: libgit.}
 
-proc credential_ssh_key_from_agent*(`out`: ptr ptr GitCred, username: cstring): cint
-   {.cdecl, importc: "git_cred_ssh_key_from_agent", dynlib: libgit.}
+proc credential_ssh_key_from_agent*(`out`: ptr ptr GitCredential, username: cstring): cint
+   {.cdecl, importc: "git_credential_ssh_key_from_agent", dynlib: libgit.}
 
-proc credential_ssh_key_new*(`out`: ptr ptr GitCred, username, publickey, privatekey, passphrase: cstring): cint
-   {.cdecl, importc: "git_cred_ssh_key_new", dynlib: libgit.}
+proc credential_ssh_key_new*(`out`: ptr ptr GitCredential, username, publickey, privatekey, passphrase: cstring): cint
+   {.cdecl, importc: "git_credential_ssh_key_new", dynlib: libgit.}
 
-proc credential_userpass_plaintext_new*(`out`: ptr ptr GitCred, username, password: cstring): cint
-   {.cdecl, importc: "git_cred_userpass_plaintext_new", dynlib: libgit.}
+proc credential_userpass_plaintext_new*(`out`: ptr ptr GitCredential, username, password: cstring): cint
+   {.cdecl, importc: "git_credential_userpass_plaintext_new", dynlib: libgit.}
 
-proc credential_username_new*(`out`: ptr ptr GitCred, username: cstring): cint
-   {.cdecl, importc: "git_cred_username_new", dynlib: libgit.}
+proc credential_username_new*(`out`: ptr ptr GitCredential, username: cstring): cint
+   {.cdecl, importc: "git_credential_username_new", dynlib: libgit.}
 
 proc clone*(`out`: ptr PGitRepository, url, path: cstring, options: ptr GitCloneOptions): cint
    {.cdecl, importc: "git_clone", dynlib: libgit.}
