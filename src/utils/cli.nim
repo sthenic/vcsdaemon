@@ -22,7 +22,7 @@ type
 
 proc parse_cli*(): CliState =
    result.alasso_url = "http://localhost:5000"
-   result.repository_store = "./repos/"
+   result.repository_store = absolute_path("./repos")
    var p = init_opt_parser()
    for kind, key, val in p.getopt():
       case kind:
@@ -45,12 +45,10 @@ proc parse_cli*(): CliState =
             if len(val) == 0:
                log.abort(CliValueError, "Option --ssh-public-key expects a value.")
             result.ssh_public_key = absolute_path(expand_tilde(normalized_path(val)))
-            echo result.ssh_public_key
          of "ssh-private-key":
             if len(val) == 0:
                log.abort(CliValueError, "Option --ssh-private-key expects a value.")
             result.ssh_private_key = absolute_path(expand_tilde(normalized_path(val)))
-            echo result.ssh_private_key
          of "ssh-passphrase":
             if len(val) == 0:
                log.abort(CliValueError, "Option --ssh-passphrase expects a value.")
@@ -59,7 +57,6 @@ proc parse_cli*(): CliState =
             if len(val) == 0:
                log.abort(CliValueError, "Option --repository-store expects a value.")
             result.repository_store = absolute_path(expand_tilde(normalized_path(val)))
-            echo result.repository_store
          of "restart-on-timeout":
             result.restart_on_timeout = true
          of "restart-on-error":
