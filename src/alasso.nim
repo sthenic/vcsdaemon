@@ -7,8 +7,13 @@ type
    AlassoError* = object of ValueError
    AlassoTimeoutError* = object of AlassoError
 
-   Repository* = object
+   Credentials* = object
       id*: int
+      label*, description*, path*: string
+      is_archived*: bool
+
+   Repository* = object
+      id*, credentials*: int
       label*, description*, url*, branch*, vcs*: string
       is_archived*: bool
 
@@ -62,6 +67,35 @@ proc on_write_ignore(data: ptr char, size: csize_t, nmemb: csize_t, user_data: p
    result = size * nmemb
 
 
+proc parse_credentials(n: JsonNode): Credentials =
+   result = Credentials(
+      id: parse_int(get_str(n["id"])),
+      label: get_str(n["attributes"]["label"]),
+      description: get_str(n["attributes"]["description"]),
+      path: get_str(n["attributes"]["path"]),
+      is_archived: get_bool(n["attributes"]["is_archived"])
+   )
+
+
+proc get_credentials*(url: string, id: int): Credentials =
+   let curl = libcurl.easy_init()
+   defer:
+      curl.easy_cleanup()
+   var str = ""
+   check_curl(curl.easy_setopt(OPT_URL, cstring(url / "api" / "credentials" / $id)))
+   check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
+   check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
+   check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))
+   check_curl(curl.easy_perform())
+
+   let code = curl.get_response_code()
+   if code != 200: # Expect 200 OK
+      raise new_alasso_error("HTTP request failed: " & $code)
+
+   let node = json.parse_json(str)
+   result = parse_credentials(node["data"])
+
+
 proc parse_repository(n: JsonNode): Repository =
    result = Repository(
       id: parse_int(get_str(n["id"])),
@@ -74,6 +108,12 @@ proc parse_repository(n: JsonNode): Repository =
    )
    # Make sure to strip away any trailing '/' from the URL.
    result.url = strip(result.url, false, true, {'/'})
+   # The credentials can be an empty to-one relationship.
+   let ln = n["relationships"]["credentials"]["data"]
+   if ln.kind == JNull:
+      result.credentials = 0
+   else:
+      result.credentials = parse_int(get_str(ln["id"]))
 
 
 proc get_repositories*(url: string): seq[Repository] =
@@ -81,8 +121,7 @@ proc get_repositories*(url: string): seq[Repository] =
    defer:
       curl.easy_cleanup()
    var str = ""
-   check_curl(curl.easy_setopt(OPT_URL,
-                               cstring(url / "api" / "repository?show_archived=true")))
+   check_curl(curl.easy_setopt(OPT_URL, cstring(url / "api" / "repository?show_archived=true")))
    check_curl(curl.easy_setopt(OPT_WRITEFUNCTION, on_write))
    check_curl(curl.easy_setopt(OPT_WRITEDATA, addr str))
    check_curl(curl.easy_setopt(OPT_TIMEOUT, CURL_TIMEOUT))

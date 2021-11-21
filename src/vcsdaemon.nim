@@ -97,8 +97,7 @@ var trackers: seq[Tracker]
 var ecode = ESUCCESS
 while not do_exit:
    try:
-      create(trackers, cli_state.alasso_url, cli_state.repository_store, cli_state.ssh_public_key,
-             cli_state.ssh_private_key, cli_state.ssh_passphrase)
+      create(trackers, cli_state.alasso_url, cli_state.repository_store)
       update(trackers)
    except TrackerTimeoutError:
       # Break the loop unless --restart-on-timeout is specified.

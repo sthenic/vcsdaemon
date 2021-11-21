@@ -12,9 +12,6 @@ type
       print_version*: bool
       as_daemon*: bool
       alasso_url*: string
-      ssh_public_key*: string
-      ssh_private_key*: string
-      ssh_passphrase*: string
       repository_store*: string
       restart_on_timeout*: bool
       restart_on_error*: bool
@@ -41,18 +38,6 @@ proc parse_cli*(): CliState =
             if len(val) == 0:
                log.abort(CliValueError, "Option --alasso-url expects a value.")
             result.alasso_url = val
-         of "ssh-public-key":
-            if len(val) == 0:
-               log.abort(CliValueError, "Option --ssh-public-key expects a value.")
-            result.ssh_public_key = absolute_path(expand_tilde(normalized_path(val)))
-         of "ssh-private-key":
-            if len(val) == 0:
-               log.abort(CliValueError, "Option --ssh-private-key expects a value.")
-            result.ssh_private_key = absolute_path(expand_tilde(normalized_path(val)))
-         of "ssh-passphrase":
-            if len(val) == 0:
-               log.abort(CliValueError, "Option --ssh-passphrase expects a value.")
-            result.ssh_passphrase = val
          of "repository-store":
             if len(val) == 0:
                log.abort(CliValueError, "Option --repository-store expects a value.")
