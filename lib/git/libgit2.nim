@@ -74,7 +74,9 @@ type
       push_update_reference*: pointer
       push_negotiation*: pointer
       transport*: pointer
-      remote_ready*: pointer
+      # libgit2 v1.0.0 and v1.1.0 do not include the `remote_ready` member.
+      when not defined(libgit2_1v0_1v1):
+         remote_ready*: pointer
       payload*: pointer
       resolve_url*: pointer
 
