@@ -28,3 +28,6 @@ options:
   --restart-on-timeout     If specified, the application will not exit with an
                            error if an operation times out, e.g. if the CURL
                            request to Alasso takes too long to complete.
+
+  --restart-on-error       If specified, the application will not exit with an
+                           error if an operation returns an error.
