@@ -138,13 +138,14 @@ template construct_walker(walk, body: untyped) =
    while revwalk_next(addr(oid), walk) == 0:
       var commit: PGitCommit
       check_libgit(commit_lookup(addr(commit), o.repository, addr(oid)))
-      let signature: ptr GitSignature = commit_author(commit)
+      let author_signature: ptr GitSignature = commit_author(commit)
+      let committer_signature: ptr GitSignature = commit_committer(commit)
       var log = GitLogObject()
       log.message = $commit_message(commit)
       log.hash = $oid
-      log.name = $signature[].name
-      log.email = $signature[].email
-      log.timestamp = signature.time.time
+      log.name = $author_signature[].name
+      log.email = $author_signature[].email
+      log.timestamp = committer_signature.time.time
       commit_free(commit)
       yield log
 

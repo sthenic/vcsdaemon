@@ -248,6 +248,9 @@ proc commit_message*(commit: PGitCommit): cstring
 proc commit_author*(commit: PGitCommit): ptr GitSignature
    {.cdecl, importc: "git_commit_author", dynlib: libgit.}
 
+proc commit_committer*(commit: PGitCommit): ptr GitSignature
+   {.cdecl, importc: "git_commit_committer", dynlib: libgit.}
+
 proc commit_free*(r: PGitCommit)
    {.cdecl, importc: "git_commit_free", dynlib: libgit.}
 
