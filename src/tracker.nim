@@ -1,7 +1,7 @@
 import strutils
 import uri
 import os
-import md5
+import checksums/md5
 
 import ./alasso
 import ./utils/log
