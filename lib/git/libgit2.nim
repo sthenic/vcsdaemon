@@ -1,7 +1,15 @@
 when defined(linux):
    const libgit = "libgit2.so"
 else:
-   raise new_exception(Exception, "Only supported on Linux")
+   {.fatal: "Only supported on Linux".}
+
+
+when defined(libgit2_major) and defined(libgit2_minor):
+   const major* {.intdefine.}: int = 0
+   const minor* {.intdefine.}: int = 0
+else:
+   {.fatal: "libgit2_major and libgit2_minor must be set".}
+
 
 const OID_RAWSZ = 20
 const
@@ -74,8 +82,7 @@ type
       push_update_reference*: pointer
       push_negotiation*: pointer
       transport*: pointer
-      # libgit2 v1.0.0 and v1.1.0 do not include the `remote_ready` member.
-      when not defined(libgit2_1v0_1v1):
+      when major == 1 and minor >= 2:
          remote_ready*: pointer
       payload*: pointer
       resolve_url*: pointer
@@ -108,13 +115,24 @@ type
       strings: cstringArray
       count: csize_t
 
+   GitRemoteRedirect* {.pure.} = enum
+      None = 0
+      Initial = 1
+      All = 2
+
    GitFetchOptions* {.bycopy.} = object
       version*: cint
       callbacks*: GitRemoteCallbacks
       prune*: GitFetchPrune
       update_fetchhead*: cint
+      when major == 1 and minor >= 8:
+         report_unchanged*: cint
       download_tags*: GitRemoteAutotagOption
       proxy_opts*: GitProxyOptions
+      when major == 1 and minor >= 7:
+         depth: cint
+      when major == 1 and minor >= 4:
+         follow_redirects*: GitRemoteRedirect
       custom_headers*: GitStrArray
 
    GitTime* {.bycopy.} = object
@@ -122,6 +140,7 @@ type
       time*: int64
       # Timezone offset, in minutes.
       offset*: cint
+      sign*: cchar
 
    GitSignature* {.bycopy.} = object
       name*: cstring
@@ -185,8 +204,15 @@ proc init*(o: var GitFetchOptions) =
    init(o.callbacks)
    init(o.proxy_opts)
    o.version = 1
+   o.update_fetchhead = 1
    o.prune = GitFetchPrune.UNSPECIFIED
    o.download_tags = GitRemoteAutotagOption.DownloadTagsUnspecified
+   when major == 1 and minor >= 4:
+      o.follow_redirects = GitRemoteRedirect.None
+   when major == 1 and minor >= 7:
+      o.depth = 0
+   when major == 1 and minor >= 8:
+      o.report_unchanged = 0
 
 proc init*(o: var GitCheckoutOptions) =
    o = GitCheckoutOptions()
