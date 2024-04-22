@@ -94,10 +94,10 @@ proc init*(o: var GitObject) =
    o.is_initialized = true
    var major, minor, rev: cint
    libgit2.version(addr(major), addr(minor), addr(rev))
-   if major != libgit2.major and minor != libgit2.minor:
+   if major != libgit2_major or minor != libgit2_minor:
       raise new_git_error("This software is only compatible with libgit2 v$1.$2.x " &
-                          "but the linked version of libgit2 is v$3.$4.$5.",
-                          libgit2.major, libgit2.minor, major, minor, rev)
+                          "but the linked version of libgit2 is v$3.$4.$5",
+                          libgit2_major, libgit2_minor, major, minor, rev)
 
 
 proc destroy*(o: var GitObject) =

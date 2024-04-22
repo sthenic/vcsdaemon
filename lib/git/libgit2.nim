@@ -5,8 +5,8 @@ else:
 
 
 when defined(libgit2_major) and defined(libgit2_minor):
-   const major* {.intdefine.}: int = 0
-   const minor* {.intdefine.}: int = 0
+   const libgit2_major* {.intdefine.}: int = 0
+   const libgit2_minor* {.intdefine.}: int = 0
 else:
    {.fatal: "libgit2_major and libgit2_minor must be set".}
 
@@ -82,7 +82,7 @@ type
       push_update_reference*: pointer
       push_negotiation*: pointer
       transport*: pointer
-      when major == 1 and minor >= 2:
+      when libgit2_major == 1 and libgit2_minor >= 2:
          remote_ready*: pointer
       payload*: pointer
       resolve_url*: pointer
@@ -125,13 +125,13 @@ type
       callbacks*: GitRemoteCallbacks
       prune*: GitFetchPrune
       update_fetchhead*: cint
-      when major == 1 and minor >= 8:
+      when libgit2_major == 1 and libgit2_minor >= 8:
          report_unchanged*: cint
       download_tags*: GitRemoteAutotagOption
       proxy_opts*: GitProxyOptions
-      when major == 1 and minor >= 7:
-         depth: cint
-      when major == 1 and minor >= 4:
+      when libgit2_major == 1 and libgit2_minor >= 7:
+         depth*: cint
+      when libgit2_major == 1 and libgit2_minor >= 4:
          follow_redirects*: GitRemoteRedirect
       custom_headers*: GitStrArray
 
@@ -207,11 +207,11 @@ proc init*(o: var GitFetchOptions) =
    o.update_fetchhead = 1
    o.prune = GitFetchPrune.UNSPECIFIED
    o.download_tags = GitRemoteAutotagOption.DownloadTagsUnspecified
-   when major == 1 and minor >= 4:
+   when libgit2_major == 1 and libgit2_minor >= 4:
       o.follow_redirects = GitRemoteRedirect.None
-   when major == 1 and minor >= 7:
+   when libgit2_major == 1 and libgit2_minor >= 7:
       o.depth = 0
-   when major == 1 and minor >= 8:
+   when libgit2_major == 1 and libgit2_minor >= 8:
       o.report_unchanged = 0
 
 proc init*(o: var GitCheckoutOptions) =
