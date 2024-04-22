@@ -7,5 +7,6 @@ COPY help.txt /app
 COPY vcsdaemon.nimble /app
 COPY src /app/src/
 COPY lib /app/lib/
-RUN nimble build -d:release
+# Alpine uses libgit2 v1.7.x
+RUN nimble build -d:release -d:libgit2_major=1 -d:libgit2_minor=7
 CMD ["sh", "-c", "/app/vcsdaemon --alasso-url=$ALASSO_URL --restart-on-error --restart-on-timeout"]
